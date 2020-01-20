@@ -1,8 +1,10 @@
 # WanderingInnScraper
-A Webscraper for the Wandering Inn Web Novel, packaged in a GUI
+A Webscraper for the Wandering Inn Web Novel, packaged in a GUI.
+
+Created by Josh Delgado.
 
 
-This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file.
+This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, and PySimpleGUI for the GUI.
 
 
 It has a nice little front end that takes in 4 options to specify how to download everything:
