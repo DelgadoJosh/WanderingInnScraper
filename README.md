@@ -4,14 +4,10 @@ A Webscraper for the Web Novel **The Wandering Inn**, packaged in a GUI.
 Created by Josh Delgado
 
 <br></br>
-<br></br>
 
 ## Description
 
 This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, and PySimpleGUI for the GUI.
-
-
-<br></br>
 
 It has a GUI that takes in 4 options to specify how to download everything:
 
@@ -25,9 +21,7 @@ It also features a console log to see the current progress of the webscraper. As
 
 If you print each chapter individually, it will automatically number them in order to ensure they are ordered in the right order. This is to offset the fact that some chapters (e.g. 1.01 R, 1.00 D, and any Interlude) would appear out of order otherwise.
 
-
-<br></br>
-
+<t></t>
 
 ## How to run
 In order to run this,
