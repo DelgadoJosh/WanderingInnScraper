@@ -4,6 +4,7 @@ A Webscraper for the Wandering Inn Web Novel, packaged in a GUI
 
 This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file.
 
+
 It has a nice little front end that takes in 4 options to specify how to download everything:
 
 1. How to print (one master file, or separated by chapter)
@@ -11,9 +12,11 @@ It has a nice little front end that takes in 4 options to specify how to downloa
 1. The last chapter to print's address (inclusive)
 1. The destination folder
 
+
 It also features a console log to see the current progress of the webscraper. As of testing (Jan 19, 2020), it should take roughly 5 minutes to scrape all four million words of the wandering inn.
 
-If you print a 
+If you print each chapter individually, it will automatically number them in order to ensure they are ordered in the right order. This is to offset the fact that some chapters (e.g. 1.01 R, 1.00 D, and any Interlude) would appear out of order otherwise.
+
 
 ### How to run
 In order to run this,
@@ -22,15 +25,16 @@ In order to run this,
 1. Execute the wanderingInnFrontEnd.py script with "python 'locationOfTheScript\wanderingInnFrontEnd.py'".
   For example: python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
 1. Fill in the information required.
-  1. Select what type of output file you want.
-  1. Type/Paste in the web address of the first chapter to scrape.
-  1. Type/Paste in the web address of the last.
-  1. Select "Browse" and select the destination folder
+    1. Select what type of output file you want.
+    1. Type/Paste in the web address of the first chapter to scrape.
+    1. Type/Paste in the web address of the last.
+    1. Select "Browse" and select the destination folder
 1. Press the Submit Button
 1. Sit back, and relax!
 
+
 ### Screenshots
-![GUI Screenshot](/images/guiScreenshot.png)
+![GUI Screenshot](/images/GUI_Screenshot.png)
 Picture of the GUI
 
 
