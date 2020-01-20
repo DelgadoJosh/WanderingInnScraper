@@ -18,7 +18,7 @@ It also features a console log to see the current progress of the webscraper. As
 If you print each chapter individually, it will automatically number them in order to ensure they are ordered in the right order. This is to offset the fact that some chapters (e.g. 1.01 R, 1.00 D, and any Interlude) would appear out of order otherwise.
 
 
-### How to run
+## How to run
 In order to run this,
 
 1. Download both wanderingInnFrontEnd.py and WanderingInnBackEnd.py and have them in the same folder.
@@ -33,7 +33,7 @@ In order to run this,
 1. Sit back, and relax!
 
 
-### Screenshots
+## Screenshots
 ![GUI Screenshot](/images/GUI_Screenshot.png)
 Picture of the GUI
 
