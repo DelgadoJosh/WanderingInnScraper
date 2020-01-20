@@ -27,11 +27,11 @@ In order to run this,
 1. Execute the wanderingInnFrontEnd.py script with **"python 'locationOfTheScript\wanderingInnFrontEnd.py'"**.
   For example: "python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
 1. Fill in the information required.
-    1. Select what type of output file you want.
-    1. Type/Paste in the web address of the first chapter to scrape.
-    1. Type/Paste in the web address of the last.
-    1. Select "Browse" and select the destination folder
-1. Press the Submit Button
+    1. Select what **type of output** file you want.
+    1. Type/Paste in the web address of the **first** chapter to scrape.
+    1. Type/Paste in the web address of the **last** chapter.
+    1. Select **"Browse"** and select the destination folder
+1. Press the **Submit** Button
 1. Sit back, and relax!
 
 
