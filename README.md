@@ -1,13 +1,13 @@
 # WanderingInnScraper
-A Webscraper for the Wandering Inn Web Novel, packaged in a GUI.
+A Webscraper for the Web Novel **The Wandering Inn**, packaged in a GUI.
 
-Created by Josh Delgado.
+Created by Josh Delgado
 
 
 This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, and PySimpleGUI for the GUI.
 
 
-It has a nice little front end that takes in 4 options to specify how to download everything:
+It has a GUI that takes in 4 options to specify how to download everything:
 
 1. How to print (one master file, or separated by chapter)
 1. The first chapter to print's address
@@ -23,9 +23,9 @@ If you print each chapter individually, it will automatically number them in ord
 ## How to run
 In order to run this,
 
-1. Download both wanderingInnFrontEnd.py and WanderingInnBackEnd.py and have them in the same folder.
-1. Execute the wanderingInnFrontEnd.py script with "python 'locationOfTheScript\wanderingInnFrontEnd.py'".
-  For example: python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
+1. Download both **wanderingInnFrontEnd.py** and **WanderingInnBackEnd.py** and have them in the same folder.
+1. Execute the wanderingInnFrontEnd.py script with **"python 'locationOfTheScript\wanderingInnFrontEnd.py'"**.
+  For example: "python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
 1. Fill in the information required.
     1. Select what type of output file you want.
     1. Type/Paste in the web address of the first chapter to scrape.
@@ -38,6 +38,7 @@ In order to run this,
 ## Screenshots
 ![GUI Screenshot](/images/GUI_Screenshot.png)
 Picture of the GUI
+
 
 
 ![GUI In Use](/images/demo.gif) 
