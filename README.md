@@ -9,10 +9,10 @@ This program allows one to download as much or as little of the web novel **The 
 
 It has a GUI that takes in 4 options to specify how to download everything:
 
-1. How to print (one master file, or separated by chapter)
-1. The first chapter to print's address
-1. The last chapter to print's address (inclusive)
-1. The destination folder
+1. **How to print** (one master file, or separated by chapter)
+1. The **first chapter** to print's address
+1. The **last chapter** to print's address (inclusive)
+1. The **destination folder**
 
 
 It also features a console log to see the current progress of the webscraper. As of testing (Jan 19, 2020), it should take roughly 5 minutes to scrape all four million words of the wandering inn.
