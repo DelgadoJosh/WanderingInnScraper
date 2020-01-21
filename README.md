@@ -5,7 +5,7 @@ Created by Josh Delgado
 
 ## Description
 
-This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, and PySimpleGUI for the GUI.
+This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, PySimpleGUI for the GUI, and PyInstaller for the executable file.
 
 It has a GUI that takes in four options to specify how to download everything:
 
@@ -31,7 +31,7 @@ In order to run this,
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
     1. Select **"Browse"** and select the destination folder
-1. Press the **Submit** Button
+1. Press the **Submit** Button.
 1. Sit back, and relax!
 
 ### With the python scripts themselves
@@ -43,7 +43,7 @@ In order to run this,
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
     1. Select **"Browse"** and select the destination folder
-1. Press the **Submit** Button
+1. Press the **Submit** Button.
 1. Sit back, and relax!
 
 
@@ -51,6 +51,7 @@ In order to run this,
 ![GUI Screenshot](/images/GUI_Screenshot.png)
 Picture of the GUI
 
+<br></br>
 
 
 ![GUI In Use](/images/demo.gif) 
