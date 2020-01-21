@@ -25,7 +25,7 @@ If you print each chapter individually, it will automatically number them in ord
 Picture of the GUI <br></br>
 
 ![GUI In Use](/images/demo.gif) 
-Example of the Script being run
+Example of the Script being run <br></br>
 
 
 
@@ -40,7 +40,7 @@ In order to run this,
     1. Select what **type of output** file you want.
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
-    1. Select **"Browse"** and select the destination folder
+    1. Select **"Browse"** and select the destination folder, or type/paste in the folder address.
 1. Press the **Submit** Button.
 1. Sit back, and relax!
 
@@ -52,7 +52,7 @@ In order to run this,
     1. Select what **type of output** file you want.
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
-    1. Select **"Browse"** and select the destination folder
+    1. Select **"Browse"** and select the destination folder, or type/paste in the folder address.
 1. Press the **Submit** Button.
 1. Sit back, and relax!
 
