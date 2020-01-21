@@ -22,9 +22,7 @@ If you print each chapter individually, it will automatically number them in ord
 
 ## Screenshots
 ![GUI Screenshot](/images/GUI_Screenshot.png)
-Picture of the GUI
-
-<br></br>
+Picture of the GUI <br></br>
 
 ![GUI In Use](/images/demo.gif) 
 Example of the Script being run
