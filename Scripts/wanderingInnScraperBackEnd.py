@@ -155,7 +155,13 @@ def scrapePage(url, stop_page_url, directory, gui_queue):
   # Break out if done.
   if(url == stop_page_url):
     printStats(directory, word_count)
+    gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
+
+    gui_queue.put(" ")
+    gui_queue.put("="*60)
+    gui_queue.put(" ")
+    gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
     return
 
   # Otherwise go to the next link and continue.
