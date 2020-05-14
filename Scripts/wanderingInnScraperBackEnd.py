@@ -32,16 +32,16 @@ def writeToFile(fileToWrite, stringToWrite):
     fileToWrite.write(stringToWrite.encode('utf8'))
 
 # Function to initialize scraping the page.
-def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory):
+def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, gui_queue):
   global print_option 
   global meta_file 
   print_option = local_print_option
   meta_file = open(directory + "/The Wandering Inn.txt", "wb")
 
-  scrapePage(start_page_url, stop_page_url, directory)
+  scrapePage(start_page_url, stop_page_url, directory, gui_queue)
 
 # Recursive function to scrape the page using Python BeautifulSoup
-def scrapePage(url, stop_page_url, directory):
+def scrapePage(url, stop_page_url, directory, gui_queue):
   global curPageNum
   global word_count
   global print_option
@@ -49,7 +49,7 @@ def scrapePage(url, stop_page_url, directory):
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
   if debug:
-    print(f"\nCurrently at {url}.")
+    gui_queue.put(f"\nCurrently at {url}.")
 
   # Appends a '/' at the end if it's not seen in the url
   # This is to allow the inputted "stop" address to stop if it 
@@ -58,7 +58,7 @@ def scrapePage(url, stop_page_url, directory):
     url += '/'
   
   if debug:
-    print(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
+    gui_queue.put(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
 
   # Accesses the page
   page = requests.get(url, headers)
@@ -70,8 +70,8 @@ def scrapePage(url, stop_page_url, directory):
   chapter_title_list = soup.find_all('h1', class_='entry-title')
   title = chapter_title_list[0].contents[0]
   if debug:
-    print(title)
-  print(f"\nCurrently Scraping {url} - {title}")
+    gui_queue.put(title)
+  gui_queue.put(f"\nCurrently Scraping {url} - {title}")
 
   # Creates a file for this specific chapter, only if needed
   fileTitle = F"{curPageNum:03d} {title}.txt"
@@ -96,7 +96,7 @@ def scrapePage(url, stop_page_url, directory):
   # Grabs the final paragraph tag (which contains the next chapter)
   last_paragraph_item = chapter_paragraph_list_items[-1]
   if debug:
-    print(f'Last item: {last_paragraph_item.contents[0]}')
+    gui_queue.put(f'Last item: {last_paragraph_item.contents[0]}')
   link_list = last_paragraph_item.find_all('a') # Grabs the <a> tags
   
   # Grabs the final paragraph that has an a tag
@@ -106,7 +106,7 @@ def scrapePage(url, stop_page_url, directory):
       link_list = cur_link_list
       break
   if(len(link_list) == 0):
-    print("Stopped due to no next_chapter_link found")
+    gui_queue.put("Stopped due to no next_chapter_link found")
     return
   next_chapter_link = link_list[-1]  # Grabs the final link to the next one
   next_chapter_url = next_chapter_link.get('href')
@@ -136,14 +136,14 @@ def scrapePage(url, stop_page_url, directory):
     word_count += len(text.split())
 
 
-  print(f"Word Count: {word_count}")
+  gui_queue.put(f"Word Count: {word_count}")
   curPageNum = curPageNum + 1
 
   # Break out if done.
   if(url == stop_page_url):
-    print("Reached the stopping page url, stopping.")
+    gui_queue.put("Reached the stopping page url, stopping.")
     return
 
   # Otherwise go to the next link and continue.
-  scrapePage(next_chapter_url, stop_page_url, directory)
+  scrapePage(next_chapter_url, stop_page_url, directory, gui_queue)
 

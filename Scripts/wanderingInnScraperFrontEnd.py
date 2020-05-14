@@ -1,6 +1,8 @@
 # This code creates a very simple GUI to run the Wandering Inn Scraper
 
-import PySimpleGUI as sg 
+import PySimpleGUI as sg
+import queue
+import threading 
 import wanderingInnScraperBackEnd as backend
 
 sg.theme('Dark Brown')
@@ -85,9 +87,14 @@ window = sg.Window(window_title, layout, default_element_size=(40, 1), grab_anyw
 confirm_title = "Confirm"
 
 
+# Queue used for communication between threads
+# Multi-threading used in order to prevent GUI-Freeze
+gui_queue = queue.Queue()
+
+
 # Event loop
 while(True):
-  event, values = window.read()
+  event, values = window.read(timeout=100)   # Timeout used to ensure it's periodically checking the other thread
 
   if event in (None, 'Exit'):
     break
@@ -111,12 +118,24 @@ while(True):
       end_url = values['ending_link']
       print_option = values['print_option']
       directory = values['folder_location']
-      backend.scrapePageInit(start_url, end_url, print_option, directory)
+      threading.Thread(target=backend.scrapePageInit,
+                        args=(start_url, end_url, print_option, directory, gui_queue), daemon=True).start()
+      # backend.scrapePageInit(start_url, end_url, print_option, directory)
 
-      print()
-      print('='*60)
-      print()
-      print("Congratulations! Your file(s) should be in the folder you specified")
+      # print()
+      # print('='*60)
+      # print()
+      # print("Congratulations! Your file(s) should be in the folder you specified")
+
+  # If the scraper attempted to print information, print that information
+  try: 
+    message = gui_queue.get_nowait() 
+  except queue.Empty:
+    message = None 
+
+  if message: 
+    print(message)
+
 
   if event == 'About...':
     sg.popup(getAboutText(), title="About")
