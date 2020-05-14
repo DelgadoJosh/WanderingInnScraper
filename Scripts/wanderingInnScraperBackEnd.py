@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
 # GLOBALS
-curPageNum = 0
+curPageNum = 1
 word_count = 0
 debug = False
 if debug:
@@ -17,6 +17,19 @@ headers = {
   'User-Agent': 'An interested fan',
   'From': 'fak3unknown1@gmail.com'
 }
+
+# Function that creates a stat page.
+# At the moment, it only has the total word count
+def printStats(directory, word_count): 
+  fileTitle = "000 STATS.txt"
+  fileTitleDirectory = directory + "/" + fileTitle
+  file = open(fileTitleDirectory, "wb")
+
+  stringToWrite = "Wandering Inn Stats\r\n"
+  file.write(stringToWrite.encode('utf8'))
+
+  stringToWrite = f"Word Count: {word_count}"
+  file.write(stringToWrite.encode('utf8'))
 
 # Function that handles writing to a file.
 def writeToFile(fileToWrite, stringToWrite):
@@ -141,6 +154,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue):
 
   # Break out if done.
   if(url == stop_page_url):
+    printStats(directory, word_count)
     gui_queue.put("Reached the stopping page url, stopping.")
     return
 
