@@ -1,0 +1,8 @@
+Wandering Inn Scraper Version Log
+
+Version 1:
+Original Release
+
+Version 1.1:
++ Multi-threading to prevent GUI Freeze for long scrapes
++ Cleaned up Formatting
