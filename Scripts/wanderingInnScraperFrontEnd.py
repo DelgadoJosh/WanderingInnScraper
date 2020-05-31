@@ -10,11 +10,13 @@ sg.theme('Dark Brown')
 
 # --- Helper Functions ---
 def getDebug(values):
+  textType = "Plain text" if(values['txt']) else "HTML"
+
   text = ""
-  text = text + "Type of output file: " + values['print_option'] + "\n"
-  text = text + "Beginning Link: " + values['beginning_link'] + "\n"
-  text = text + "Ending Link: " + values['ending_link'] + "\n"
-  text = text + "Folder Address: " + values['folder_location'] + "\n"
+  text += "Type of output file: " + values['print_option'] + ", " + textType + "\n"
+  text += "Beginning Link: " + values['beginning_link'] + "\n"
+  text += "Ending Link: " + values['ending_link'] + "\n"
+  text += "Folder Address: " + values['folder_location'] + "\n"
   return text
 
 def getAboutText():
@@ -32,12 +34,12 @@ debug = False
 menu_def = [['File', ['Exit']],
             ['Help', 'About...'],]
 
-print_options = ('One Large File', 'Individual Chapters', 'Both')
+print_options = ('One Large File', 'Individual Chapters', 'Both',)
 
 default_beginning_link = "https://wanderinginn.com/2016/07/27/1-00/"
-default_ending_link = ""
+default_ending_link = "https://wanderinginn.com/2016/07/27/1-00/"
 
-default_folder = "Please pick a folder!"
+default_folder = "D:/WanderingInn/WanderingInnScraper/junk"
 
 # Options
 left_side_width = 50
@@ -48,6 +50,7 @@ left_side_layout = [
   # Output Option
   [sg.Text("Please select what type of output file:", size=(left_side_width, 1))],
   [sg.InputOptionMenu(print_options, key='print_option', size=((int)(left_side_width*0.8), 1))],
+  [sg.Radio('Plain text', "textRadio", key="txt", default=True, size=(10, 1)), sg.Radio('HTML', "textRadio", key="html")],
   [sg.Text('_'*(int)(left_side_width))],
 
   # Web Addresses
@@ -118,8 +121,10 @@ while(True):
       end_url = values['ending_link']
       print_option = values['print_option']
       directory = values['folder_location']
+      format_choice = "txt" if(values['txt']) else "html"
+ 
       threading.Thread(target=backend.scrapePageInit,
-                        args=(start_url, end_url, print_option, directory, gui_queue), daemon=True).start()
+                        args=(start_url, end_url, print_option, directory, format_choice, gui_queue), daemon=True).start()
       # backend.scrapePageInit(start_url, end_url, print_option, directory)
 
       # print()

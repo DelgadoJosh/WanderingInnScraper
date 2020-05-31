@@ -32,29 +32,77 @@ def printStats(directory, word_count):
   file.write(stringToWrite.encode('utf8'))
 
 # Function that handles writing to a file.
-def writeToFile(fileToWrite, stringToWrite):
+def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
+  global word_count
+
+  if(format_choice == "txt"):
+    file.write(title.encode('utf8'))
+    file.write("\n\r\n\r".encode("utf8"))
+    if(print_option == "both"):
+      meta_file.write(title.encode('utf8'))
+      file.write("\n\r\n\r".encode("utf8"))
+  else:
+    if (print_option != "One Large File"):
+      file.write(f"""<!DOCTYPE html><html><head><style href='stylesheet.css'/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
+    if(print_option != "Individual Chapters"):
+      meta_file.write(f"<h2>{title}</h2>".encode("utf8"))
+
+
+
+  # Create a for loop to print out all paragraph texts (except the last).
+  # https://stackoverflow.com/questions/914715/how-to-loop-through-all-but-the-last-item-of-a-list
+  for chapter_paragraph in contentsToWrite[:-1]:
+    
+    # Goes through every tag within the paragraph.
+    for chapter_paragraph_part in chapter_paragraph.contents[:-1]:
+      text = chapter_paragraph_part
+      if(format_choice == "txt" and not isinstance(chapter_paragraph_part, NavigableString)):  
+        text = chapter_paragraph_part.get_text()
+      file.write(text.encode("uft8"))
+      # TODO: Add support for "Both"
+
+    chapter_paragraph_last_part = chapter_paragraph.contents[-1]
+    text = chapter_paragraph_last_part
+    if(format_choice == "txt" and not isinstance(chapter_paragraph_last_part, NavigableString)):  
+      text = chapter_paragraph_last_part.get_text()
+
+  if(format_choice != "txt"):
+    if(print_option != "One Large File"):
+      file.write("</body></html>".encode("utf8"))
+    
+
+  """ chapter_paragraph_last_part = chapter_paragraph.contents[-1]
+  text = chapter_paragraph_last_part
+
+  file.write(text.encode('utf8'))
+  if(print_option == "Both"):
+    meta_file.write(text.encode('utf8'))
+
+  word_count += len(text.split())
+ """
   
-  if print_option == 'One Large File':
+  """ if print_option == 'One Large File':
     meta_file.write(stringToWrite.encode('utf8'))
   elif print_option == 'Individual Chapters':
     fileToWrite.write(stringToWrite.encode('utf8'))
   elif print_option == 'Both':
     meta_file.write(stringToWrite.encode('utf8'))
     fileToWrite.write(stringToWrite.encode('utf8'))
-
+ """
 # Function to initialize scraping the page.
-def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, gui_queue):
+def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
   global print_option 
   global meta_file 
   print_option = local_print_option
-  meta_file = open(directory + "/The Wandering Inn.txt", "wb")
-
-  scrapePage(start_page_url, stop_page_url, directory, gui_queue)
+  meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
+  if(local_print_option != "Individual Chapters"):
+    meta_file.write("""<!DOCTYPE html><html><head><style href='stylesheet.css'/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+  scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
 
 # Recursive function to scrape the page using Python BeautifulSoup
-def scrapePage(url, stop_page_url, directory, gui_queue):
+def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
   global word_count
   global print_option
@@ -87,17 +135,13 @@ def scrapePage(url, stop_page_url, directory, gui_queue):
   gui_queue.put(f"\nCurrently Scraping {url} - {title}")
 
   # Creates a file for this specific chapter, only if needed
-  fileTitle = F"{curPageNum:03d} {title}.txt"
+  fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
 
   # fileTitleDirectory = f"{os.getcwd()}\\Chapters\\{curPageNum:03d} {title}.txt"
   fileTitleDirectory = directory + "/" + fileTitle
   file = meta_file
   if print_option != 'One Large File':
     file = open(fileTitleDirectory, "wb")
-
-  writeToFile(file, title)
-  writeToFile(file, "\r\n")
-  writeToFile(file, "\r\n")
 
 
   # Pull all text from the "entry-content" div
@@ -124,36 +168,15 @@ def scrapePage(url, stop_page_url, directory, gui_queue):
   next_chapter_link = link_list[-1]  # Grabs the final link to the next one
   next_chapter_url = next_chapter_link.get('href')
 
-
-  # Create a for loop to print out all paragraph texts (except the last).
-  # https://stackoverflow.com/questions/914715/how-to-loop-through-all-but-the-last-item-of-a-list
-  for chapter_paragraph in chapter_paragraph_list_items[:-1]:
-    
-    # Goes through every tag within the paragraph.
-    for chapter_paragraph_part in chapter_paragraph.contents[:-1]:
-      text = chapter_paragraph_part
-      if(not(isinstance(chapter_paragraph_part, NavigableString))):  
-        text = chapter_paragraph_part.get_text()
-
-      writeToFile(file, text)
-      word_count += len(text.split())
-
-    chapter_paragraph_last_part = chapter_paragraph.contents[-1]
-    text = chapter_paragraph_last_part
-    if(not(isinstance(chapter_paragraph_last_part, NavigableString))):  
-      text = chapter_paragraph_last_part.get_text()
-
-    writeToFile(file, text)
-    writeToFile(file, "\r\n")
-    writeToFile(file, "\r\n")
-    word_count += len(text.split())
-
+  writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
 
   gui_queue.put(f"Word Count: {word_count}")
   curPageNum = curPageNum + 1
-
   # Break out if done.
   if(url == stop_page_url):
+    if(format_choice == "html" and print_option != "Individual Chapters"):
+      meta_file.write("</body></html>".encode("utf8"))
+
     printStats(directory, word_count)
     gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
@@ -165,5 +188,6 @@ def scrapePage(url, stop_page_url, directory, gui_queue):
     return
 
   # Otherwise go to the next link and continue.
-  scrapePage(next_chapter_url, stop_page_url, directory, gui_queue)
+  scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
+
 
