@@ -45,9 +45,10 @@ In order to run this,
 1. Sit back, and relax!
 
 ### With the python scripts themselves
-1. Download both **wanderingInnFrontEnd.py** and **WanderingInnBackEnd.py** and have them in the same folder.
-1. Execute the wanderingInnFrontEnd.py script with **"python 'locationOfTheScript\wanderingInnFrontEnd.py'"**.
-  For example: "python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
+1. Follow the instructions in the `dependencies.md` file found in the `Scripts` folder of this repository.
+1. Download both `wanderingInnFrontEnd.py` and `WanderingInnBackEnd.py` from the `Scripts` folder and have them in the same folder.
+1. Execute the `wanderingInnFrontEnd.py` script with `"python 'locationOfTheScript\wanderingInnFrontEnd.py'"`.
+  For example: `python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"`
 1. Fill in the information required.
     1. Select what **type of output** file you want.
     1. Type/Paste in the web address of the **first** chapter to scrape.
