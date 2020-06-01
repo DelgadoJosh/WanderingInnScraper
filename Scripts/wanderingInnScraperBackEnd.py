@@ -67,6 +67,8 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
 def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
   global print_option 
   global meta_file 
+  global word_count
+  word_count = 0
   print_option = local_print_option
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
