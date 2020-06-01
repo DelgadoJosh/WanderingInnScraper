@@ -36,31 +36,35 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
   global word_count
+  print(format_choice == "txt")
   #print(f"writetofile args: {file} {title} {contentsToWrite.te} {format_choice} {gui_queue}")
   if(format_choice == "txt"):
     file.write(title.encode('utf8'))
     file.write("\n\r\n\r".encode("utf8"))
-    if(print_option == "both"):
+    if(print_option == "Both"):
       meta_file.write(title.encode('utf8'))
-      file.write("\n\r\n\r".encode("utf8"))
+      meta_file.write("\n\r\n\r".encode("utf8"))
   else:
     if (print_option != "One Large File"):
       file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
     if(print_option != "Individual Chapters"):
-      meta_file.write(f"<h2>{title}</h2>".encode("utf8"))
+      meta_file.write(f"<h2 id='id{curPageNum}'>{title}</h2>".encode("utf8"))
 
-
+  if(format_choice == "txt"):
+    contentsToWrite = contentsToWrite.text
   file.write(str(contentsToWrite).encode("utf8"))
-      # TODO: Add support for "Both"
+  if(print_option == "Both"):
+    meta_file.write(str(contentsToWrite).encode("utf8"))  
 
-  """   chapter_paragraph_last_part = chapter_paragraph.contents[-1]
-    text = chapter_paragraph_last_part
-    if(format_choice == "txt" and not isinstance(chapter_paragraph_last_part, NavigableString)):  
-      text = chapter_paragraph_last_part.get_text()
- """
   if(format_choice != "txt"):
     if(print_option != "One Large File"):
       file.write("</body></html>".encode("utf8"))
+  else:
+    file.write(("-"*60).encode("utf8"))
+    if(print_option == "Both"):
+      meta_file.write(("-"*60).encode("utf8"))
+
+    
     
 
   """ chapter_paragraph_last_part = chapter_paragraph.contents[-1]
