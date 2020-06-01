@@ -5,7 +5,7 @@ Created by Josh Delgado
 
 ## Description
 
-This program allows one to download as much or as little of the web novel **The Wandering Inn** as you'd like, as eithr a .txt or .html file. It uses Python's Beautiful Soup for the webscraping, PySimpleGUI for the GUI, and PyInstaller for the executable file.
+This program allows one to download as much or as little of the web novel **The Wandering Inn** as you'd like, as either a .txt or .html file. It uses Python's Beautiful Soup for the webscraping, PySimpleGUI for the GUI, and PyInstaller for the executable file.
 
 It has a GUI that takes in five options to specify how to download everything:
 
