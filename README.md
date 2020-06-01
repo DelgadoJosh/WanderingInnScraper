@@ -5,11 +5,12 @@ Created by Josh Delgado
 
 ## Description
 
-This program allows one to download as much or as little of the web novel **The Wandering Inn** as a .txt file. It uses Python's Beautiful Soup for the webscraping, PySimpleGUI for the GUI, and PyInstaller for the executable file.
+This program allows one to download as much or as little of the web novel **The Wandering Inn** as you'd like, as eithr a .txt or .html file. It uses Python's Beautiful Soup for the webscraping, PySimpleGUI for the GUI, and PyInstaller for the executable file.
 
-It has a GUI that takes in four options to specify how to download everything:
+It has a GUI that takes in five options to specify how to download everything:
 
 1. **How to print** (one master file, or separated by chapter)
+1. What **format** to print (plain text, or HTML)
 1. The **first chapter** to print's address
 1. The **last chapter** to print's address (inclusive)
 1. The **destination folder**
@@ -38,22 +39,26 @@ In order to run this,
 1. Double click the **WanderingInnScraper.exe** once downloaded.
 1. Fill in the information required.
     1. Select what **type of output** file you want.
+    1. Select what **format of output** file you want
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
     1. Select **"Browse"** and select the destination folder, or type/paste in the folder address.
 1. Press the **Submit** Button.
 1. Sit back, and relax!
+    1. If you selected **HTML** output, you can download the **style.css** file from the **Example Output** directory into the directory with your html files, to make the files more readable.  
 
 ### With the python scripts themselves
 1. Download both **wanderingInnFrontEnd.py** and **WanderingInnBackEnd.py** and have them in the same folder.
 1. Execute the wanderingInnFrontEnd.py script with **"python 'locationOfTheScript\wanderingInnFrontEnd.py'"**.
   For example: "python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"
 1. Fill in the information required.
-    1. Select what **type of output** file you want.
+    1. Select what **type of output** file you want
+    1. Select what **format of output** file you want
     1. Type/Paste in the web address of the **first** chapter to scrape.
     1. Type/Paste in the web address of the **last** chapter.
     1. Select **"Browse"** and select the destination folder, or type/paste in the folder address.
 1. Press the **Submit** Button.
 1. Sit back, and relax!
+    1. If you selected **HTML** output, you can download the **style.css** file from the **Example Output** directory into the directory with your html files, to make the files more readable.   
 
 
