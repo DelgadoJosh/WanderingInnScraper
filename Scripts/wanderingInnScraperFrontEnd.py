@@ -37,9 +37,9 @@ menu_def = [['File', ['Exit']],
 print_options = ('One Large File', 'Individual Chapters', 'Both',)
 
 default_beginning_link = "https://wanderinginn.com/2016/07/27/1-00/"
-default_ending_link = "https://wanderinginn.com/2016/07/27/1-00/"
+default_ending_link = ""
 
-default_folder = "D:/WanderingInn/WanderingInnScraper/junk"
+default_folder = ""
 
 # Options
 left_side_width = 50
