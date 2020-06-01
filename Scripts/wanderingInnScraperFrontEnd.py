@@ -20,9 +20,9 @@ def getDebug(values):
   return text
 
 def getAboutText():
-  text = ""
-  text = text + "Wandering Inn Scraper\n"
-  text = text + "by Josh Delgdao\n"
+  text =  ""
+  text += "Wandering Inn Scraper\n"
+  text += "by Josh Delgdao\n"
   return text
 
 # Debug Setting
