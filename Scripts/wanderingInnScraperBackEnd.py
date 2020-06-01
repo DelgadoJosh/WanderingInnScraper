@@ -35,8 +35,6 @@ def printStats(directory, word_count):
 def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
-  global word_count
-  print(format_choice == "txt")
   #print(f"writetofile args: {file} {title} {contentsToWrite.te} {format_choice} {gui_queue}")
   if(format_choice == "txt"):
     file.write(title.encode('utf8'))
@@ -64,27 +62,7 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
     if(print_option == "Both"):
       meta_file.write(("-"*60).encode("utf8"))
 
-    
-    
 
-  """ chapter_paragraph_last_part = chapter_paragraph.contents[-1]
-  text = chapter_paragraph_last_part
-
-  file.write(text.encode('utf8'))
-  if(print_option == "Both"):
-    meta_file.write(text.encode('utf8'))
-
-  word_count += len(text.split())
- """
-  
-  """ if print_option == 'One Large File':
-    meta_file.write(stringToWrite.encode('utf8'))
-  elif print_option == 'Individual Chapters':
-    fileToWrite.write(stringToWrite.encode('utf8'))
-  elif print_option == 'Both':
-    meta_file.write(stringToWrite.encode('utf8'))
-    fileToWrite.write(stringToWrite.encode('utf8'))
- """
 # Function to initialize scraping the page.
 def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
   global print_option 
@@ -165,7 +143,20 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   next_chapter_url = next_chapter_link.get('href')
 
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+  for chapter_paragraph in chapter_paragraph_list_items[:-1]:
+      
+      # Goes through every tag within the paragraph.
+      for chapter_paragraph_part in chapter_paragraph.contents[:-1]:
+        text = chapter_paragraph_part
+        if(not(isinstance(chapter_paragraph_part, NavigableString))):  
+          text = chapter_paragraph_part.get_text()
+        word_count += len(text.split())
 
+      chapter_paragraph_last_part = chapter_paragraph.contents[-1]
+      text = chapter_paragraph_last_part
+      if(not(isinstance(chapter_paragraph_last_part, NavigableString))):  
+        text = chapter_paragraph_last_part.get_text()
+      word_count += len(text.split())
   gui_queue.put(f"Word Count: {word_count}")
   curPageNum = curPageNum + 1
   # Break out if done.
