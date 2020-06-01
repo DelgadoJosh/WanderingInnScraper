@@ -36,7 +36,7 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
   global word_count
-
+  #print(f"writetofile args: {file} {title} {contentsToWrite.te} {format_choice} {gui_queue}")
   if(format_choice == "txt"):
     file.write(title.encode('utf8'))
     file.write("\n\r\n\r".encode("utf8"))
@@ -45,29 +45,19 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
       file.write("\n\r\n\r".encode("utf8"))
   else:
     if (print_option != "One Large File"):
-      file.write(f"""<!DOCTYPE html><html><head><style href='stylesheet.css'/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
+      file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
     if(print_option != "Individual Chapters"):
       meta_file.write(f"<h2>{title}</h2>".encode("utf8"))
 
 
-
-  # Create a for loop to print out all paragraph texts (except the last).
-  # https://stackoverflow.com/questions/914715/how-to-loop-through-all-but-the-last-item-of-a-list
-  for chapter_paragraph in contentsToWrite[:-1]:
-    
-    # Goes through every tag within the paragraph.
-    for chapter_paragraph_part in chapter_paragraph.contents[:-1]:
-      text = chapter_paragraph_part
-      if(format_choice == "txt" and not isinstance(chapter_paragraph_part, NavigableString)):  
-        text = chapter_paragraph_part.get_text()
-      file.write(text.encode("uft8"))
+  file.write(str(contentsToWrite).encode("utf8"))
       # TODO: Add support for "Both"
 
-    chapter_paragraph_last_part = chapter_paragraph.contents[-1]
+  """   chapter_paragraph_last_part = chapter_paragraph.contents[-1]
     text = chapter_paragraph_last_part
     if(format_choice == "txt" and not isinstance(chapter_paragraph_last_part, NavigableString)):  
       text = chapter_paragraph_last_part.get_text()
-
+ """
   if(format_choice != "txt"):
     if(print_option != "One Large File"):
       file.write("</body></html>".encode("utf8"))
@@ -95,12 +85,14 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
 def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
   global print_option 
   global meta_file 
+  print(f"scrapeinit args: {start_page_url} {stop_page_url} {local_print_option} {directory} {format_choice} {gui_queue}")
   print_option = local_print_option
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
-  if(local_print_option != "Individual Chapters"):
-    meta_file.write("""<!DOCTYPE html><html><head><style href='stylesheet.css'/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+  if(print_option != "Individual Chapters" and format_choice == "html"):
+    meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
-
+  if(print_option != "Individual Chapters" and format_choice == "html"):
+      meta_file.write("""</body></html>""".encode("utf8"))
 # Recursive function to scrape the page using Python BeautifulSoup
 def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
@@ -174,9 +166,6 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   curPageNum = curPageNum + 1
   # Break out if done.
   if(url == stop_page_url):
-    if(format_choice == "html" and print_option != "Individual Chapters"):
-      meta_file.write("</body></html>".encode("utf8"))
-
     printStats(directory, word_count)
     gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
