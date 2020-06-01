@@ -44,7 +44,8 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
       meta_file.write("\n\r\n\r".encode("utf8"))
   else:
     if (print_option != "One Large File"):
-      file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
+      file.write("""<!DOCTYPE html><html><head><style>html{background:#000;color:#bbb;margin-right:auto;margin-left:auto;box-sizing:border-box}html *{background:inherit;color:inherit;font-family:Arial,Helvetica,sans-serif;box-sizing:inherit}body{padding:0 20px}h1,h2,h3{color:#fff}div{color:inherit}div p a{display:none}</style>""".encode("utf8"))
+      file.write(f"""<title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
     if(print_option != "Individual Chapters"):
       meta_file.write(f"<h2 id='id{curPageNum}'>{title}</h2>".encode("utf8"))
 
@@ -70,7 +71,7 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   print_option = local_print_option
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
-    meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+    meta_file.write("""<!DOCTYPE html><html><head><style>html{background:#000;color:#bbb;margin-right:auto;margin-left:auto;box-sizing:border-box}html *{background:inherit;color:inherit;font-family:Arial,Helvetica,sans-serif;box-sizing:inherit}body{padding:0 20px}h1,h2,h3{color:#fff}div{color:inherit}div p a{display:none}</style><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
   if(print_option != "Individual Chapters" and format_choice == "html"):
       meta_file.write("""</body></html>""".encode("utf8"))
