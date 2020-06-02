@@ -1,6 +1,7 @@
 import os
 import csv
 import requests
+import re
 from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
@@ -50,6 +51,11 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
 
   if(format_choice == "txt"):
     contentsToWrite = contentsToWrite.text
+  else:
+    contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
+    contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
+
+  
   file.write(str(contentsToWrite).encode("utf8"))
   if(print_option == "Both"):
     meta_file.write(str(contentsToWrite).encode("utf8"))  
