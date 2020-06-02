@@ -31,6 +31,7 @@ def printStats(directory, word_count):
 
   stringToWrite = f"Word Count: {word_count}"
   file.write(stringToWrite.encode('utf8'))
+  file.close()
 
 # Function that handles writing to a file.
 def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
@@ -182,9 +183,11 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     gui_queue.put("="*60)
     gui_queue.put(" ")
     gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
+    meta_file.close()
     return
 
   # Otherwise go to the next link and continue.
+  file.close()
   scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
 
 
