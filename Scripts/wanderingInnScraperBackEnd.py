@@ -8,6 +8,7 @@ from bs4 import NavigableString
 # GLOBALS
 curPageNum = 1
 word_count = 0
+chapter_list = []
 debug = False
 if debug:
   meta_file = open("00000 META.txt", "wb")
@@ -81,19 +82,26 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   global meta_file 
   global word_count
   global curPageNum
+
+  print("Init called, running")
+
   word_count = 0
   curPageNum = 1
   print_option = local_print_option
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
     meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+    meta_file.write("\n\r\n\r".encode("utf8"))
+  
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
+
 
 # Recursive function to scrape the page using Python BeautifulSoup
 def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
   global word_count
   global print_option
+  global chapter_list
 
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
@@ -121,6 +129,9 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   if debug:
     gui_queue.put(title)
   gui_queue.put(f"\nCurrently Scraping {url} - {title}")
+
+  if(print_option != "Individual Chapters"):
+    chapter_list.append([curPageNum, title])
 
   # Creates a file for this specific chapter, only if needed
   fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
@@ -157,6 +168,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   next_chapter_url = next_chapter_link.get('href')
 
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+  
   for chapter_paragraph in chapter_paragraph_list_items[:-1]:
       
       # Goes through every tag within the paragraph.
@@ -180,6 +192,15 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
       meta_file.write("""</body></html>""".encode("utf8"))
     meta_file.close()
     
+    if(print_option != "Individual Chapters" and format_choice == "html"):
+      with open(f"{directory}/The Wandering Inn.{format_choice}", "r") as metaIn:
+        meta_lines = metaIn.readlines()
+      
+      meta_lines[1] = generateTOC(chapter_list)
+
+      with open(directory + f"/The Wandering Inn.{format_choice}", "w") as metaOut:
+        metaOut.writelines(meta_lines)
+
     printStats(directory, word_count)
     gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
@@ -191,7 +212,14 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     return
 
   # Otherwise go to the next link and continue.
-  file.close()
+  if(print_option == "Individual Chapters"):
+    file.close()
   scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
 
+def generateTOC(chapter_list):
+    TOC_string = '<br/><br/><div style="border-left: 3px solid white;padding: 0 15px;line-height: 1.5;">'
+    for i in chapter_list:
+      TOC_string += f'<a href="#id{i[0]}">{i[1]}</a><br/>'
+    TOC_string += "</div>\n"
 
+    return TOC_string
