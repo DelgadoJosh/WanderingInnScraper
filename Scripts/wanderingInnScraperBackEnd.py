@@ -59,7 +59,7 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
     contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
 
   # Remove text from links
-  contentsToWrite = re.sub(r'[Nn]ext Chapter|[Pp]revious chapter', '', str(contentsToWrite), flags=re.S)
+  contentsToWrite = re.sub(r'(Previous chapter)?.*Next Chapter|', '', str(contentsToWrite), flags=re.I)
   
   file.write(str(contentsToWrite).encode("utf8"))
   if(print_option == "Both"):
@@ -69,9 +69,10 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
     if(print_option != "One Large File"):
       file.write("</body></html>".encode("utf8"))
   else:
-    file.write(("-"*60 + "\n\r\n\r").encode("utf8"))
+    file.write(("-"*60).encode("utf8"))
     if(print_option == "Both"):
       meta_file.write(("-"*60).encode("utf8"))
+      meta_file.write("\n\r\n\r".encode("utf8"))
 
 
 # Function to initialize scraping the page.
@@ -87,8 +88,7 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   if(print_option != "Individual Chapters" and format_choice == "html"):
     meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
-  if(print_option != "Individual Chapters" and format_choice == "html"):
-      meta_file.write("""</body></html>""".encode("utf8"))
+
 # Recursive function to scrape the page using Python BeautifulSoup
 def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
@@ -175,6 +175,11 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   curPageNum = curPageNum + 1
   # Break out if done.
   if(url == stop_page_url):
+
+    if(print_option != "Individual Chapters" and format_choice == "html"):
+      meta_file.write("""</body></html>""".encode("utf8"))
+    meta_file.close()
+    
     printStats(directory, word_count)
     gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
@@ -183,7 +188,6 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     gui_queue.put("="*60)
     gui_queue.put(" ")
     gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
-    meta_file.close()
     return
 
   # Otherwise go to the next link and continue.

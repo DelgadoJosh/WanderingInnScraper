@@ -25,7 +25,3 @@ h1, h2, h3 {
 div {
     color: inherit;
 }
-
-div p a {
-    display: none;
-}
