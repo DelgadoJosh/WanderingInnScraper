@@ -50,11 +50,15 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
       meta_file.write(f"<h2 id='id{curPageNum}'>{title}</h2>".encode("utf8"))
 
   if(format_choice == "txt"):
+    # Remove all those pesky HTML tags
     contentsToWrite = contentsToWrite.text
   else:
+    # Remove all those pesky, unescaped fancy quotes and apostrophes
     contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
     contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
 
+  # Remove text from links
+  contentsToWrite = re.sub(r'[Nn]ext Chapter|[Pp]revious chapter', '', str(contentsToWrite), flags=re.S)
   
   file.write(str(contentsToWrite).encode("utf8"))
   if(print_option == "Both"):
@@ -64,7 +68,7 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
     if(print_option != "One Large File"):
       file.write("</body></html>".encode("utf8"))
   else:
-    file.write(("-"*60).encode("utf8"))
+    file.write(("-"*60 + "\n\r\n\r").encode("utf8"))
     if(print_option == "Both"):
       meta_file.write(("-"*60).encode("utf8"))
 
@@ -76,7 +80,7 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   global word_count
   global curPageNum
   word_count = 0
-  curPageNum = 0
+  curPageNum = 1
   print_option = local_print_option
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
