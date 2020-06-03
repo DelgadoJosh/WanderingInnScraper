@@ -191,7 +191,8 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     return
 
   # Otherwise go to the next link and continue.
-  file.close()
+  if(print_option == "Individual Chapters"):
+    file.close()
   scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
 
 
