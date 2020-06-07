@@ -12,6 +12,7 @@ html * {
     color: inherit;
     font-family: Arial, Helvetica, sans-serif;
     box-sizing: inherit;
+    word-wrap: break-word;
 }
 
 body {
