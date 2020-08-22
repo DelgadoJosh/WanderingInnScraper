@@ -152,6 +152,8 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
       break
   if(len(link_list) == 0):
     gui_queue.put("Stopped due to no next_chapter_link found")
+    printStats(directory, word_count)
+    file.close()
     return
   next_chapter_link = link_list[-1]  # Grabs the final link to the next one
   next_chapter_url = next_chapter_link.get('href')
