@@ -7,3 +7,6 @@ Version 1.1:
 + Multi-threading to prevent GUI Freeze for long scrapes
 + Added Stats Page (Word Count)
 + Cleaned up Formatting
+
+Version 1.2
++ HTML support added
