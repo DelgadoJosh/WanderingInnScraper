@@ -110,18 +110,26 @@ while(True):
 
   if event == 'Submit':
     # Check the data to make sure it's good, if not, throw error and continue loop
+    start_url = values['beginning_link']
+    end_url = values['ending_link']
+    print_option = values['print_option']
+    directory = values['folder_location']
+    format_choice = "txt" if(values['txt']) else "html"
 
+    if (end_url == ''):
+      sg.popup("Make sure to add an ending url!")
+      continue
 
+    if (directory == ''):
+      sg.popup("Make sure to choose a folder!")
+      continue
+
+    # At this point, the data should be verified
     # Open up the confirm window
     # confirm_window = sg.Window(confirm_title, confirm_layout, grab_anywhere=True)
     confirmed = sg.PopupYesNo("Here's the info you input: ", getDebug(values),"Are you sure you want to submit?", title="Confirm", )
     if confirmed == 'Yes':
       print("Beginning Program")
-      start_url = values['beginning_link']
-      end_url = values['ending_link']
-      print_option = values['print_option']
-      directory = values['folder_location']
-      format_choice = "txt" if(values['txt']) else "html"
  
       threading.Thread(target=backend.scrapePageInit,
                         args=(start_url, end_url, print_option, directory, format_choice, gui_queue), daemon=True).start()
