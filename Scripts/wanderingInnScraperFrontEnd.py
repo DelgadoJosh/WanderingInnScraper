@@ -133,14 +133,9 @@ while(True):
  
       threading.Thread(target=backend.scrapePageInit,
                         args=(start_url, end_url, print_option, directory, format_choice, gui_queue), daemon=True).start()
-      # backend.scrapePageInit(start_url, end_url, print_option, directory)
 
-      # print()
-      # print('='*60)
-      # print()
-      # print("Congratulations! Your file(s) should be in the folder you specified")
-
-  # If the scraper attempted to print information, print that information
+  # If the scraper back-end attempted to print information, 
+  # print that information
   try: 
     message = gui_queue.get_nowait() 
   except queue.Empty:
