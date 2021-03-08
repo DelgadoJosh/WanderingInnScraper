@@ -1,7 +1,7 @@
 # WanderingInnScraper
 A Webscraper for the Web Novel **The Wandering Inn**, packaged in a GUI.
 
-Created by Josh Delgado
+Created by Josh Delgado and BurningEmbyr
 
 ## Description
 
