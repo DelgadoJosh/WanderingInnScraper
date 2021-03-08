@@ -16,7 +16,7 @@ It has a GUI that takes in five options to specify how to download everything:
 1. The **destination folder**
 
 
-It also features a console log to see the current progress of the webscraper. As of testing (Jan 19, 2020), it should take roughly five minutes to scrape all four million words of the wandering inn.
+It also features a console log to see the current progress of the webscraper. As of testing (March 8, 2021), it should take roughly ten minutes to scrape all seven million words of the wandering inn.
 
 If you print each chapter individually, it will automatically number them in order to ensure they are ordered in the right order. This is to offset the fact that some chapters (e.g. 1.01 R, 1.00 D, and any Interlude) would appear out of order otherwise.
 
