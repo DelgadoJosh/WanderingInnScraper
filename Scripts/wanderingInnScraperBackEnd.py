@@ -2,6 +2,7 @@ import os
 import csv
 import requests
 import re
+import json
 from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
@@ -11,6 +12,7 @@ word_count = 0
 debug = False
 if debug:
   meta_file = open("00000 META.txt", "wb")
+next_links = None
 print_option = ''
 headers = {
   # This header is used to mark the webscraper so the server knows
@@ -18,6 +20,28 @@ headers = {
   'User-Agent': 'An interested fan',
   'From': 'fak3unknown1@gmail.com'
 }
+
+# Functiion that will read in a json file containing
+# manually inputted links if that file exists
+# This is for any unusual chapters where the "Next Chapter" link does not work
+def readLinkFile(gui_queue):
+  global next_links
+
+  filename = "links.json"
+  filepath = os.getcwd() + "\\" + filename
+  try: 
+    file = open(filepath)
+    json_text = file.read()
+    next_links = json.loads(json_text)
+  except Exception as e:
+    gui_queue.put(f"WARNING: No links.json detected, so no manual links were loaded")
+    gui_queue.put(f"The program could not locate it at {filepath}")
+    gui_queue.put(f" ")
+    gui_queue.put(f"[DEBUG] Here's the details on the specific Exception: {e}")
+    gui_queue.put(f" ")
+    gui_queue.put(f"It's fine to run regardless, just be weary of any looping at the end of Volume 7!")
+    return
+
 
 # Function that creates a stat page.
 # At the moment, it only has the total word count
@@ -37,7 +61,6 @@ def printStats(directory, word_count):
 def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
-  #print(f"writetofile args: {file} {title} {contentsToWrite.te} {format_choice} {gui_queue}")
   if(format_choice == "txt"):
     file.write(title.encode('utf8'))
     file.write("\n\r\n\r".encode("utf8"))
@@ -87,6 +110,11 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
     meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+  
+  # Grabs manual links if they exist in a links.json
+  readLinkFile(gui_queue)
+
+  # Start scraping
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
 
 # Recursive function to scrape the page using Python BeautifulSoup
@@ -94,6 +122,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
   global word_count
   global print_option
+  global next_links
 
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
@@ -144,21 +173,31 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     gui_queue.put(f'Last item: {last_paragraph_item.contents[0]}')
   link_list = last_paragraph_item.find_all('a') # Grabs the <a> tags
   
-  # Grabs the final paragraph that has an a tag
-  for paragraph_item in reversed(chapter_paragraph_list_items):
-    cur_link_list = paragraph_item.find_all('a')
-    if(len(cur_link_list) > 0):
-      link_list = cur_link_list
-      break
-  if(len(link_list) == 0):
-    gui_queue.put("Stopped due to no next_chapter_link found")
-    printStats(directory, word_count)
-    file.close()
-    return
-  next_chapter_link = link_list[-1]  # Grabs the final link to the next one
-  next_chapter_url = next_chapter_link.get('href')
+  # Grabs the next chapter link
+  # Will use the manual link if it exists
+  if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
+    next_chapter_url = next_links["AfterLinks"][url]
+  else:
+    # Grabs the final paragraph that has an a tag
+    for paragraph_item in reversed(chapter_paragraph_list_items):
+      cur_link_list = paragraph_item.find_all('a')
+      if(len(cur_link_list) > 0):
+        link_list = cur_link_list
+        break
+    
+    # Quits if there is no next chapter link found
+    if(len(link_list) == 0):
+      gui_queue.put("Stopped due to no next_chapter_link found")
+      printStats(directory, word_count)
+      file.close()
+      return
+    next_chapter_link = link_list[-1]  # Grabs the final link to the next one
+    next_chapter_url = next_chapter_link.get('href')
 
+  # Write this page to file
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+  
+  # Grab the word count
   for chapter_paragraph in chapter_paragraph_list_items[:-1]:
       
       # Goes through every tag within the paragraph.
@@ -175,6 +214,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
       word_count += len(text.split())
   gui_queue.put(f"Word Count: {word_count}")
   curPageNum = curPageNum + 1
+
   # Break out if done.
   if(url == stop_page_url):
 
