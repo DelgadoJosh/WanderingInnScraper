@@ -35,8 +35,11 @@ Example of the Script being run <br></br>
 ### With an executable
 In order to run this,
 
-1. Download **WanderingInnScraper.exe** found in the **Executable** folder.
-1. Double click the **WanderingInnScraper.exe** once downloaded.
+1. Download `WanderingInnScraper.exe` found in the **Executable** folder.
+    1. Technically optional, but highly recommended, download `links.json`, which is also found in the **Executable folder**.
+        1. This is used to manually add links for irregular hyperlinks on the site. It's recommended to not look too much into the links themselves if you're worried about spoilers.
+        1. Once you have `links.json`, make sure you put it in the same folder as `WanderingInnScraper.exe`.
+1. Double click the `WanderingInnScraper.exe` once downloaded.
 1. Fill in the information required.
     1. Select what **type of output** file you want.
     1. Select what **format of output** file you want
@@ -45,12 +48,15 @@ In order to run this,
     1. Select **"Browse"** and select the destination folder, or type/paste in the folder address.
 1. Press the **Submit** Button.
 1. Sit back, and relax!
-    1. If you selected **HTML** output, you can download the **style.css** file from the **Example Output** directory into the directory with your html files, to make the files more readable.  
+    1. If you selected **HTML** output, you can download the `style.css` file from the **Example Output** directory into the directory with your html files, to make the files more readable.  
 
 ### With the python scripts themselves
-1. Follow the instructions in the `dependencies.md` file found in the `Scripts` folder of this repository.
-1. Download both `wanderingInnFrontEnd.py` and `WanderingInnBackEnd.py` from the `Scripts` folder and have them in the same folder.
-1. Execute the `wanderingInnFrontEnd.py` script with `"python 'locationOfTheScript\wanderingInnFrontEnd.py'"`.
+1. Follow the instructions in the `dependencies.md` file found in the **Scripts** folder of this repository.
+1. Download both `wanderingInnFrontEnd.py` and `WanderingInnBackEnd.py` from the **Scripts** folder and have them in the same folder.
+    1. Technically optional, but highly recommended, download `links.json`, which is also found in the **Executable folder**.
+        1. This is used to manually add links for irregular hyperlinks on the site. It's recommended to not look too much into the links themselves if you're worried about spoilers.
+        1. Once you have `links.json`, make sure you put it in the same folder as `WanderingInnScraper.exe`.
+1. Execute the `wanderingInnFrontEnd.py` script with `python "locationOfTheScript\wanderingInnFrontEnd.py"`.
   For example: `python "C:\MyUserName\Downloads\wanderingInnFrontEnd.py"`
 1. Fill in the information required.
     1. Select what **type of output** file you want
