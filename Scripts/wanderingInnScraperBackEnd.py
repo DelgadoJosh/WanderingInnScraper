@@ -20,6 +20,12 @@ headers = {
   'User-Agent': 'An interested fan',
   'From': 'fak3unknown1@gmail.com'
 }
+csv_file_headers = [
+  "title",
+  "link",
+  "chapter_word_count",
+  "total_word_count",
+]
 
 # Functiion that will read in a json file containing
 # manually inputted links if that file exists
@@ -104,6 +110,9 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   global meta_file 
   global word_count
   global curPageNum
+  global csv_file
+  global csv_writer
+  global csv_file_headers
   word_count = 0
   curPageNum = 1
   print_option = local_print_option
@@ -114,6 +123,11 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   # Grabs manual links if they exist in a links.json
   readLinkFile(gui_queue)
 
+  # Creates a csv file
+  csv_file = open(directory + '/000 STATS.csv', mode='w', newline='') 
+  csv_writer = csv.DictWriter(csv_file, fieldnames=csv_file_headers)
+  csv_writer.writeheader()
+
   # Start scraping
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
 
@@ -123,6 +137,8 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global word_count
   global print_option
   global next_links
+  global csv_file 
+  global csv_writer
 
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
@@ -217,12 +233,24 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
   curPageNum = curPageNum + 1
 
+  # Create a dictionary of information for the chapter
+  chapter_info = {}
+  chapter_info["title"] = title 
+  chapter_info["link"] = url
+  chapter_info["chapter_word_count"] = chapter_word_count
+  chapter_info["total_word_count"] = word_count
+
+  # Writes the chapter info to the csv file
+  csv_writer.writerow(chapter_info)
+
   # Break out if done.
   if(url == stop_page_url):
 
     if(print_option != "Individual Chapters" and format_choice == "html"):
       meta_file.write("""</body></html>""".encode("utf8"))
     meta_file.close()
+
+    csv_file.close()
     
     printStats(directory, word_count)
     gui_queue.put(" ")
