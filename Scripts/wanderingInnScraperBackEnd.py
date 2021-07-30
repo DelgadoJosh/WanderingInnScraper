@@ -198,6 +198,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
   
   # Grab the word count
+  chapter_word_count = 0
   for chapter_paragraph in chapter_paragraph_list_items[:-1]:
       
       # Goes through every tag within the paragraph.
@@ -205,14 +206,15 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
         text = chapter_paragraph_part
         if(not(isinstance(chapter_paragraph_part, NavigableString))):  
           text = chapter_paragraph_part.get_text()
-        word_count += len(text.split())
+        chapter_word_count += len(text.split())
 
       chapter_paragraph_last_part = chapter_paragraph.contents[-1]
       text = chapter_paragraph_last_part
       if(not(isinstance(chapter_paragraph_last_part, NavigableString))):  
         text = chapter_paragraph_last_part.get_text()
-      word_count += len(text.split())
-  gui_queue.put(f"Word Count: {word_count}")
+      chapter_word_count += len(text.split())
+  word_count += chapter_word_count
+  gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
   curPageNum = curPageNum + 1
 
   # Break out if done.
