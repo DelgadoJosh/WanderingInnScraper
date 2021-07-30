@@ -66,7 +66,7 @@ left_side_layout = [
     sg.InputText(default_folder, size=(left_side_width-20, 1), key='folder_location'), sg.FolderBrowse()],
 
   # Submit & Cancel Buttons
-  [sg.Submit(tooltip='Click to begin scraping'), sg.Button('Stop Program')],
+  [sg.Submit(tooltip='Click to begin scraping')],
 ]
 
 
