@@ -14,3 +14,7 @@ Version 1.2
 
 Version 1.3
 + Added support for a "links.json" to allow for custom next links in case of irregular hyperlinks
+
+Version 1.4
++ Added Stats csv file (Chapter Word Count, Total Word Count)
++ Removed the unnecessary "Stop Program" button
