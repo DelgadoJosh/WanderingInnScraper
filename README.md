@@ -20,6 +20,23 @@ It also features a console log to see the current progress of the webscraper. As
 
 If you print each chapter individually, it will automatically number them in order to ensure they are ordered in the right order. This is to offset the fact that some chapters (e.g. 1.01 R, 1.00 D, and any Interlude) would appear out of order otherwise.
 
+### Expected Output
+
+* The Wandering Inn.html / The Wandering Inn.txt
+  * A meta-file that contains all the chapters in a single file
+  * Will only spawn if you want a master file, or both a master file and single chapters
+* NNN Title.txt / NNN Title.html
+  * An individual chapter, where NNN is the order of the chapters.
+  * The NNN is added as some chapter names may be out of order otherwise (e.g. 1.01 R, 1.00 D, and any Interlude)
+* 000 STATS.csv
+  * A comma separated file (basically an excel file) giving the word counts for each chapter
+* 000 STATS.txt
+  * A text file containing the total word count.
+* 000 Word Frequency.csv
+  * A text file containing all the words in The Wandering Inn and their frequency, and the first and last chapters they appear in.
+  * Note: To open this file in excel, don't open the file itself, you have to import the data (by default, it'll read it as a western file, but you want to read unicode instead). To do so, follow this [guide](https://stackoverflow.com/questions/6002256/is-it-possible-to-force-excel-recognize-utf-8-csv-files-automatically). The tl;dr is to import it by opening a blank workbook and then use Data > Import External Data > Import Data. Then change the file origin to "65001 UTF-8" with commas as the delimiter.
+
+
 
 ## Screenshots
 ![GUI Screenshot](/images/GUI_Screenshot.png)

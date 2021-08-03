@@ -18,3 +18,7 @@ Version 1.3
 Version 1.4
 + Added Stats csv file (Chapter Word Count, Total Word Count)
 + Removed the unnecessary "Stop Program" button
+
+Version 1.5
++ Added Word Frequency csv file (Frequency of words, Location in story)
++ Cleaned up some unnecessary code

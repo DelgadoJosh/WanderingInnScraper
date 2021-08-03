@@ -26,6 +26,12 @@ csv_file_headers = [
   "chapter_word_count",
   "total_word_count",
 ]
+word_frequency_headers = [
+  "word",
+  "frequency",
+  "first-appearance",
+  "last-appearance",
+]
 
 # Functiion that will read in a json file containing
 # manually inputted links if that file exists
@@ -62,6 +68,22 @@ def printStats(directory, word_count):
   stringToWrite = f"Word Count: {word_count}"
   file.write(stringToWrite.encode('utf8'))
   file.close()
+
+
+def printWordFrequency():
+  global word_frequency_headers
+  global word_frequency_filename
+  global word_frequency_dict
+
+  # Note: Make sure to use Unicode encoding (Specifically for 1.06 R "Dogeza")
+  with open(word_frequency_filename, mode='w', newline='', encoding='utf-8') as csv_file:
+    csv_writer_word_freq = csv.DictWriter(csv_file, fieldnames=word_frequency_headers)
+    csv_writer_word_freq.writeheader()
+
+    # Write the rows in decreasing order by their frequency
+    for word in sorted(word_frequency_dict, key=lambda x: (word_frequency_dict[x]["frequency"]), reverse=True):
+      csv_writer_word_freq.writerow(word_frequency_dict[word])
+
 
 # Function that handles writing to a file.
 def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
@@ -113,6 +135,8 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   global csv_file
   global csv_writer
   global csv_file_headers
+  global word_frequency_filename
+  global word_frequency_dict
   word_count = 0
   curPageNum = 1
   print_option = local_print_option
@@ -128,6 +152,10 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   csv_writer = csv.DictWriter(csv_file, fieldnames=csv_file_headers)
   csv_writer.writeheader()
 
+  # Setup the necessary info to create a file for the word frequency
+  word_frequency_filename = directory + '/000 Word Frequency.csv'
+  word_frequency_dict = {}
+
   # Start scraping
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
 
@@ -139,6 +167,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global next_links
   global csv_file 
   global csv_writer
+  global word_frequency_dict
 
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
@@ -217,18 +246,36 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   chapter_word_count = 0
   for chapter_paragraph in chapter_paragraph_list_items[:-1]:
       
-      # Goes through every tag within the paragraph.
-      for chapter_paragraph_part in chapter_paragraph.contents[:-1]:
-        text = chapter_paragraph_part
-        if(not(isinstance(chapter_paragraph_part, NavigableString))):  
-          text = chapter_paragraph_part.get_text()
-        chapter_word_count += len(text.split())
+    # Goes through every tag within the paragraph.
+    for chapter_paragraph_part in chapter_paragraph.contents:
+      text = chapter_paragraph_part
+      if(not(isinstance(chapter_paragraph_part, NavigableString))):  
+        text = chapter_paragraph_part.get_text()
+      
+      split_text = text.split()
+      for word in split_text:
+        # Remove punctuation from the text.
+        # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
+        word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
+        word = word.rstrip('.') 
+        word = word.rstrip('?')
+        word = word.rstrip('!')
+        # Used rstrip to remove the periods at end of sentences. 
+        # Not in the regex because it may be part of a word, or elipses...
+        # Apostrophe's also may be part of a name (Az'kerash)
 
-      chapter_paragraph_last_part = chapter_paragraph.contents[-1]
-      text = chapter_paragraph_last_part
-      if(not(isinstance(chapter_paragraph_last_part, NavigableString))):  
-        text = chapter_paragraph_last_part.get_text()
-      chapter_word_count += len(text.split())
+        # Update the dictionary of word frequencies
+        if word not in word_frequency_dict:
+          # If it's not in the dictionary, this is the first time it's been seen
+          word_frequency_dict[word] = {}
+          word_frequency_dict[word]["word"] = word
+          word_frequency_dict[word]["frequency"] = 0
+          word_frequency_dict[word]["first-appearance"] = title
+
+        word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
+        word_frequency_dict[word]["last-appearance"] = title
+
+      chapter_word_count += len(split_text)
   word_count += chapter_word_count
   gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
   curPageNum = curPageNum + 1
@@ -252,7 +299,9 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
 
     csv_file.close()
     
+    printWordFrequency()
     printStats(directory, word_count)
+
     gui_queue.put(" ")
     gui_queue.put("Reached the stopping page url, stopping.")
 
