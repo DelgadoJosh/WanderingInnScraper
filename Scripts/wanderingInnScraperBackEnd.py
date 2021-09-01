@@ -127,7 +127,7 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
 
 
 # Function to initialize scraping the page.
-def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
+def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue, do_download_images):
   global print_option 
   global meta_file 
   global word_count
@@ -156,6 +156,9 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   word_frequency_filename = directory + '/000 Word Frequency.csv'
   word_frequency_dict = {}
 
+  global download_images
+  download_images = do_download_images
+
   # Start scraping
   scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
 
@@ -168,6 +171,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global csv_file 
   global csv_writer
   global word_frequency_dict
+  global download_images
 
   # Removes the .wordpress found on the site
   url = url.replace(".wordpress","")  
@@ -242,6 +246,27 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   # Write this page to file
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
   
+  # Download images if needed
+  if download_images:
+    # Create images directory if it doesn't exist
+    images_directory_name = 'images'
+    images_directory_path = os.path.join(directory, images_directory_name)
+    if not os.path.isdir(images_directory_path):
+      os.mkdir(images_directory_path)
+      
+    # Finds every image and downloads them
+    chapter_img_list = chapter_paragraph_list.find_all('img')
+    for img_element in chapter_img_list:
+      img_element_link_possibly_cropped = img_element.get('src')
+      # Remove all text after the first "?" (to remove cropping) by keeping up to the first ? found
+      img_element_link = img_element_link_possibly_cropped[0: img_element_link_possibly_cropped.find('?')]
+
+      img_title = f"{curPageNum:03d} {title} - {os.path.basename(img_element_link)}"
+      img_file_path = os.path.join(images_directory_path, img_title)
+      print(f"Downloading {img_title}")
+      with open(img_file_path, 'wb') as img_file:
+        img_file.write(requests.get(img_element_link).content)
+
   # Grab the word count
   chapter_word_count = 0
   for chapter_paragraph in chapter_paragraph_list_items[:-1]:

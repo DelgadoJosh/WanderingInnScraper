@@ -50,7 +50,7 @@ left_side_layout = [
   # Output Option
   [sg.Text("Please select what type of output file:", size=(left_side_width, 1))],
   [sg.InputOptionMenu(print_options, key='print_option', size=((int)(left_side_width*0.8), 1))],
-  [sg.Radio('Plain text', "textRadio", key="txt", default=True, size=(10, 1)), sg.Radio('HTML', "textRadio", key="html")],
+  [sg.Radio('Plain text', "textRadio", key="txt", default=True, size=(10, 1)), sg.Radio('HTML', "textRadio", key="html", size=(9, 1)), sg.Checkbox('Download Images', key='download_images')],
   [sg.Text('_'*(int)(left_side_width))],
 
   # Web Addresses
@@ -115,6 +115,7 @@ while(True):
     print_option = values['print_option']
     directory = values['folder_location']
     format_choice = "txt" if(values['txt']) else "html"
+    do_download_images = values['download_images']
 
     if (end_url == ''):
       sg.popup("Make sure to add an ending url!")
@@ -132,7 +133,7 @@ while(True):
       print("Beginning Program")
  
       threading.Thread(target=backend.scrapePageInit,
-                        args=(start_url, end_url, print_option, directory, format_choice, gui_queue), daemon=True).start()
+                        args=(start_url, end_url, print_option, directory, format_choice, gui_queue, do_download_images), daemon=True).start()
 
   # If the scraper back-end attempted to print information, 
   # print that information
