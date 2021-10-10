@@ -169,151 +169,153 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global csv_writer
   global word_frequency_dict
 
-  # Removes the .wordpress found on the site
-  url = url.replace(".wordpress","")  
-  if debug:
-    gui_queue.put(f"\nCurrently at {url}.")
+  while True:
+    # Removes the .wordpress found on the site
+    url = url.replace(".wordpress","")  
+    if debug:
+      gui_queue.put(f"\nCurrently at {url}.")
 
-  # Appends a '/' at the end if it's not seen in the url
-  # This is to allow the inputted "stop" address to stop if it 
-  # encounters an address that does not end in a '/'
-  if(url[len(url)-1] != '/'):
-    url += '/'
-  
-  if debug:
-    gui_queue.put(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
-
-  # Accesses the page
-  page = requests.get(url, headers)
-
-  # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
-  soup = BeautifulSoup(page.text, 'html.parser')
-
-  # Grabs the title from the "entry-title" h1
-  chapter_title_list = soup.find_all('h1', class_='entry-title')
-  title = chapter_title_list[0].contents[0]
-  if debug:
-    gui_queue.put(title)
-  gui_queue.put(f"\nCurrently Scraping {url} - {title}")
-
-  # Creates a file for this specific chapter, only if needed
-  fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
-
-  # fileTitleDirectory = f"{os.getcwd()}\\Chapters\\{curPageNum:03d} {title}.txt"
-  fileTitleDirectory = directory + "/" + fileTitle
-  file = meta_file
-  if print_option != 'One Large File':
-    file = open(fileTitleDirectory, "wb")
-
-
-  # Pull all text from the "entry-content" div
-  chapter_paragraph_list = soup.find(class_='entry-content')
-  
-  # Pull text from all instances of <p> tag within BodyText div
-  chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
-
-  # Grabs the final paragraph tag (which contains the next chapter)
-  last_paragraph_item = chapter_paragraph_list_items[-1]
-  if debug:
-    gui_queue.put(f'Last item: {last_paragraph_item.contents[0]}')
-  link_list = last_paragraph_item.find_all('a') # Grabs the <a> tags
-  
-  # Grabs the next chapter link
-  # Will use the manual link if it exists
-  if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
-    next_chapter_url = next_links["AfterLinks"][url]
-  else:
-    # Grabs the final paragraph that has an a tag
-    for paragraph_item in reversed(chapter_paragraph_list_items):
-      cur_link_list = paragraph_item.find_all('a')
-      if(len(cur_link_list) > 0):
-        link_list = cur_link_list
-        break
+    # Appends a '/' at the end if it's not seen in the url
+    # This is to allow the inputted "stop" address to stop if it 
+    # encounters an address that does not end in a '/'
+    if(url[len(url)-1] != '/'):
+      url += '/'
     
-    # Quits if there is no next chapter link found
-    if(len(link_list) == 0):
-      gui_queue.put("Stopped due to no next_chapter_link found")
+    if debug:
+      gui_queue.put(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
+
+    # Accesses the page
+    page = requests.get(url, headers)
+
+    # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
+    soup = BeautifulSoup(page.text, 'html.parser')
+
+    # Grabs the title from the "entry-title" h1
+    chapter_title_list = soup.find_all('h1', class_='entry-title')
+    title = chapter_title_list[0].contents[0]
+    if debug:
+      gui_queue.put(title)
+    gui_queue.put(f"\nCurrently Scraping {url} - {title}")
+
+    # Creates a file for this specific chapter, only if needed
+    fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
+
+    # fileTitleDirectory = f"{os.getcwd()}\\Chapters\\{curPageNum:03d} {title}.txt"
+    fileTitleDirectory = directory + "/" + fileTitle
+    file = meta_file
+    if print_option != 'One Large File':
+      file = open(fileTitleDirectory, "wb")
+
+
+    # Pull all text from the "entry-content" div
+    chapter_paragraph_list = soup.find(class_='entry-content')
+    
+    # Pull text from all instances of <p> tag within BodyText div
+    chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
+
+    # Grabs the final paragraph tag (which contains the next chapter)
+    last_paragraph_item = chapter_paragraph_list_items[-1]
+    if debug:
+      gui_queue.put(f'Last item: {last_paragraph_item.contents[0]}')
+    link_list = last_paragraph_item.find_all('a') # Grabs the <a> tags
+    
+    # Grabs the next chapter link
+    # Will use the manual link if it exists
+    if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
+      next_chapter_url = next_links["AfterLinks"][url]
+    else:
+      # Grabs the final paragraph that has an a tag
+      for paragraph_item in reversed(chapter_paragraph_list_items):
+        cur_link_list = paragraph_item.find_all('a')
+        if(len(cur_link_list) > 0):
+          link_list = cur_link_list
+          break
+      
+      # Quits if there is no next chapter link found
+      if(len(link_list) == 0):
+        gui_queue.put("Stopped due to no next_chapter_link found")
+        printStats(directory, word_count)
+        file.close()
+        return
+      next_chapter_link = link_list[-1]  # Grabs the final link to the next one
+      next_chapter_url = next_chapter_link.get('href')
+
+    # Write this page to file
+    writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+    
+    # Grab the word count
+    chapter_word_count = 0
+    for chapter_paragraph in chapter_paragraph_list_items[:-1]:
+        
+      # Goes through every tag within the paragraph.
+      for chapter_paragraph_part in chapter_paragraph.contents:
+        text = chapter_paragraph_part
+        if(not(isinstance(chapter_paragraph_part, NavigableString))):  
+          text = chapter_paragraph_part.get_text()
+        
+        split_text = text.split()
+        for word in split_text:
+          # Remove punctuation from the text.
+          # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
+          word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
+          word = word.rstrip('.') 
+          word = word.rstrip('?')
+          word = word.rstrip('!')
+          # Used rstrip to remove the periods at end of sentences. 
+          # Not in the regex because it may be part of a word, or elipses...
+          # Apostrophe's also may be part of a name (Az'kerash)
+
+          # Update the dictionary of word frequencies
+          if word not in word_frequency_dict:
+            # If it's not in the dictionary, this is the first time it's been seen
+            word_frequency_dict[word] = {}
+            word_frequency_dict[word]["word"] = word
+            word_frequency_dict[word]["frequency"] = 0
+            word_frequency_dict[word]["first-appearance"] = title
+
+          word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
+          word_frequency_dict[word]["last-appearance"] = title
+
+        chapter_word_count += len(split_text)
+    word_count += chapter_word_count
+    gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
+    curPageNum = curPageNum + 1
+
+    # Create a dictionary of information for the chapter
+    chapter_info = {}
+    chapter_info["title"] = title 
+    chapter_info["link"] = url
+    chapter_info["chapter_word_count"] = chapter_word_count
+    chapter_info["total_word_count"] = word_count
+
+    # Writes the chapter info to the csv file
+    csv_writer.writerow(chapter_info)
+
+    # Break out if done.
+    if(url == stop_page_url):
+
+      if(print_option != "Individual Chapters" and format_choice == "html"):
+        meta_file.write("""</body></html>""".encode("utf8"))
+      meta_file.close()
+
+      csv_file.close()
+      
+      printWordFrequency()
       printStats(directory, word_count)
-      file.close()
+
+      gui_queue.put(" ")
+      gui_queue.put("Reached the stopping page url, stopping.")
+
+      gui_queue.put(" ")
+      gui_queue.put("="*60)
+      gui_queue.put(" ")
+      gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
       return
-    next_chapter_link = link_list[-1]  # Grabs the final link to the next one
-    next_chapter_url = next_chapter_link.get('href')
 
-  # Write this page to file
-  writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
-  
-  # Grab the word count
-  chapter_word_count = 0
-  for chapter_paragraph in chapter_paragraph_list_items[:-1]:
-      
-    # Goes through every tag within the paragraph.
-    for chapter_paragraph_part in chapter_paragraph.contents:
-      text = chapter_paragraph_part
-      if(not(isinstance(chapter_paragraph_part, NavigableString))):  
-        text = chapter_paragraph_part.get_text()
-      
-      split_text = text.split()
-      for word in split_text:
-        # Remove punctuation from the text.
-        # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
-        word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
-        word = word.rstrip('.') 
-        word = word.rstrip('?')
-        word = word.rstrip('!')
-        # Used rstrip to remove the periods at end of sentences. 
-        # Not in the regex because it may be part of a word, or elipses...
-        # Apostrophe's also may be part of a name (Az'kerash)
+    # Otherwise go to the next link and continue.
+    if(print_option == "Individual Chapters"):
+      file.close()
 
-        # Update the dictionary of word frequencies
-        if word not in word_frequency_dict:
-          # If it's not in the dictionary, this is the first time it's been seen
-          word_frequency_dict[word] = {}
-          word_frequency_dict[word]["word"] = word
-          word_frequency_dict[word]["frequency"] = 0
-          word_frequency_dict[word]["first-appearance"] = title
-
-        word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
-        word_frequency_dict[word]["last-appearance"] = title
-
-      chapter_word_count += len(split_text)
-  word_count += chapter_word_count
-  gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
-  curPageNum = curPageNum + 1
-
-  # Create a dictionary of information for the chapter
-  chapter_info = {}
-  chapter_info["title"] = title 
-  chapter_info["link"] = url
-  chapter_info["chapter_word_count"] = chapter_word_count
-  chapter_info["total_word_count"] = word_count
-
-  # Writes the chapter info to the csv file
-  csv_writer.writerow(chapter_info)
-
-  # Break out if done.
-  if(url == stop_page_url):
-
-    if(print_option != "Individual Chapters" and format_choice == "html"):
-      meta_file.write("""</body></html>""".encode("utf8"))
-    meta_file.close()
-
-    csv_file.close()
-    
-    printWordFrequency()
-    printStats(directory, word_count)
-
-    gui_queue.put(" ")
-    gui_queue.put("Reached the stopping page url, stopping.")
-
-    gui_queue.put(" ")
-    gui_queue.put("="*60)
-    gui_queue.put(" ")
-    gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
-    return
-
-  # Otherwise go to the next link and continue.
-  if(print_option == "Individual Chapters"):
-    file.close()
-  scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
+    url = next_chapter_url
 
 
