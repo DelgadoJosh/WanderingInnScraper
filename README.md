@@ -1,4 +1,4 @@
-# WanderingInnScraper
+# The Wandering Inn Scraper
 A Webscraper for the Web Novel **The Wandering Inn**, packaged in a GUI.
 
 Created by Josh Delgado and BurningEmbyr

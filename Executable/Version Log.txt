@@ -22,3 +22,6 @@ Version 1.4
 Version 1.5
 + Added Word Frequency csv file (Frequency of words, Location in story)
 + Cleaned up some unnecessary code
+
+Version 1.6
++ Changed Code to be Iterative

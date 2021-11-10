@@ -156,10 +156,21 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   word_frequency_filename = directory + '/000 Word Frequency.csv'
   word_frequency_dict = {}
 
-  # Start scraping
-  scrapePage(start_page_url, stop_page_url, directory, format_choice, gui_queue)
+  # Scrape until you reach the ending url
+  about_to_scrape_last_page = False
+  url = start_page_url
+  while True:
+    if url == stop_page_url:
+      about_to_scrape_last_page = True
+    
+    url = scrapePage(url, stop_page_url, directory, format_choice, gui_queue)
+    
+    # If we just scraped the final page, stop
+    if about_to_scrape_last_page:
+      return
 
-# Recursive function to scrape the page using Python BeautifulSoup
+
+# Function to scrape the page using Python BeautifulSoup, returns the next url
 def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global curPageNum
   global word_count
@@ -169,8 +180,6 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   global csv_writer
   global word_frequency_dict
 
-  # Removes the .wordpress found on the site
-  url = url.replace(".wordpress","")  
   if debug:
     gui_queue.put(f"\nCurrently at {url}.")
 
@@ -238,6 +247,9 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
       return
     next_chapter_link = link_list[-1]  # Grabs the final link to the next one
     next_chapter_url = next_chapter_link.get('href')
+    
+    # Removes the .wordpress found on the site
+    next_chapter_url = next_chapter_url.replace(".wordpress","")  
 
   # Write this page to file
   writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
@@ -290,7 +302,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   # Writes the chapter info to the csv file
   csv_writer.writerow(chapter_info)
 
-  # Break out if done.
+  # Clean up if you're done
   if(url == stop_page_url):
 
     if(print_option != "Individual Chapters" and format_choice == "html"):
@@ -309,11 +321,13 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     gui_queue.put("="*60)
     gui_queue.put(" ")
     gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
-    return
 
-  # Otherwise go to the next link and continue.
+  # Clean up the file if we're done with the individual file
   if(print_option == "Individual Chapters"):
     file.close()
-  scrapePage(next_chapter_url, stop_page_url, directory, format_choice, gui_queue)
+
+
+
+  return next_chapter_url
 
 
