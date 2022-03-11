@@ -85,8 +85,8 @@ def printWordFrequency():
       csv_writer_word_freq.writerow(word_frequency_dict[word])
 
 
-# Function that handles writing to a file.
-def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
+# Function that handles writing the chapter to a file.
+def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
   global meta_file
   global print_option
   if(format_choice == "txt"):
@@ -125,6 +125,50 @@ def writeToFile(file, title, contentsToWrite, format_choice, gui_queue):
       meta_file.write(("-"*60).encode("utf8"))
       meta_file.write("\n\r\n\r".encode("utf8"))
 
+
+def removePunctuation(word):
+  # Remove punctuation from the text.
+  # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
+  word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
+  word = word.rstrip('.') 
+  word = word.rstrip('?')
+  word = word.rstrip('!')
+  # Used rstrip to remove the periods at end of sentences. 
+  # Not in the regex because it may be part of a word, or elipses...
+  # Apostrophe's also may be part of a name (Az'kerash)
+  return word
+
+
+def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
+  global word_frequency_dict 
+
+  chapter_word_count = 0
+  for chapter_paragraph in paragraph_list:
+    
+    # Goes through every tag within the paragraph.
+    for chapter_paragraph_part in chapter_paragraph.contents:
+      text = chapter_paragraph_part
+      if(not(isinstance(chapter_paragraph_part, NavigableString))):  
+        text = chapter_paragraph_part.get_text()
+      
+      split_text = text.split()
+      for word in split_text:
+        word = removePunctuation(word)
+
+        # Update the dictionary of word frequencies
+        if word not in word_frequency_dict:
+          # If it's not in the dictionary, this is the first time it's been seen
+          word_frequency_dict[word] = {}
+          word_frequency_dict[word]["word"] = word
+          word_frequency_dict[word]["frequency"] = 0
+          word_frequency_dict[word]["first-appearance"] = title
+
+        word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
+        word_frequency_dict[word]["last-appearance"] = title
+
+      chapter_word_count += len(split_text)
+
+  return chapter_word_count
 
 # Function to initialize scraping the page.
 def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
@@ -208,7 +252,6 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   # Creates a file for this specific chapter, only if needed
   fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
 
-  # fileTitleDirectory = f"{os.getcwd()}\\Chapters\\{curPageNum:03d} {title}.txt"
   fileTitleDirectory = directory + "/" + fileTitle
   file = meta_file
   if print_option != 'One Large File':
@@ -251,43 +294,11 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
     # Removes the .wordpress found on the site
     next_chapter_url = next_chapter_url.replace(".wordpress","")  
 
-  # Write this page to file
-  writeToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+  # Write this chapter to file
+  writeChapterToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
   
-  # Grab the word count
-  chapter_word_count = 0
-  for chapter_paragraph in chapter_paragraph_list_items[:-1]:
-      
-    # Goes through every tag within the paragraph.
-    for chapter_paragraph_part in chapter_paragraph.contents:
-      text = chapter_paragraph_part
-      if(not(isinstance(chapter_paragraph_part, NavigableString))):  
-        text = chapter_paragraph_part.get_text()
-      
-      split_text = text.split()
-      for word in split_text:
-        # Remove punctuation from the text.
-        # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
-        word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
-        word = word.rstrip('.') 
-        word = word.rstrip('?')
-        word = word.rstrip('!')
-        # Used rstrip to remove the periods at end of sentences. 
-        # Not in the regex because it may be part of a word, or elipses...
-        # Apostrophe's also may be part of a name (Az'kerash)
-
-        # Update the dictionary of word frequencies
-        if word not in word_frequency_dict:
-          # If it's not in the dictionary, this is the first time it's been seen
-          word_frequency_dict[word] = {}
-          word_frequency_dict[word]["word"] = word
-          word_frequency_dict[word]["frequency"] = 0
-          word_frequency_dict[word]["first-appearance"] = title
-
-        word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
-        word_frequency_dict[word]["last-appearance"] = title
-
-      chapter_word_count += len(split_text)
+  # Grab the word count, but don't include the final "paragraph" which is just the next chapter links
+  chapter_word_count = getChapterWordCountAndUpdateWordFrequencies(chapter_paragraph_list_items[:-1], title)
   word_count += chapter_word_count
   gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
   curPageNum = curPageNum + 1
