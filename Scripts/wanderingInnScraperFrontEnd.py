@@ -22,7 +22,7 @@ def getDebug(values):
 def getAboutText():
   text =  ""
   text += "Wandering Inn Scraper\n"
-  text += "by Josh Delgdao\n"
+  text += "by Josh Delgado\n"
   return text
 
 # Debug Setting
@@ -36,7 +36,8 @@ menu_def = [['File', ['Exit']],
 
 print_options = ('One Large File', 'Individual Chapters', 'Both',)
 
-default_beginning_link = "https://wanderinginn.com/2016/07/27/1-00/"
+# default_beginning_link = "https://wanderinginn.com/2016/07/27/1-00/"  # Pre re-write
+default_beginning_link = "https://wanderinginn.com/2017/03/03/rw1-00/" 
 default_ending_link = ""
 
 default_folder = ""
@@ -49,7 +50,7 @@ left_side_layout = [
 
   # Output Option
   [sg.Text("Please select what type of output file:", size=(left_side_width, 1))],
-  [sg.InputOptionMenu(print_options, key='print_option', size=((int)(left_side_width*0.8), 1))],
+  [sg.InputOptionMenu(print_options, key='print_option', size=((int)(left_side_width*0.8), 1), default_value='One Large File')],
   [sg.Radio('Plain text', "textRadio", key="txt", default=True, size=(10, 1)), sg.Radio('HTML', "textRadio", key="html")],
   [sg.Text('_'*(int)(left_side_width))],
 

@@ -28,3 +28,7 @@ Version 1.6
 
 Version 1.6.1
 + Refactored code to be a bit neater
+
+Version 1.6.2
++ Added support for chapter rewrites (stripping out unnecessary characters)
++ Set default

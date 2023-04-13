@@ -138,6 +138,10 @@ def removePunctuation(word):
   # Apostrophe's also may be part of a name (Az'kerash)
   return word
 
+def removeIllegalWindowsCharacters(file_path):
+  file_path = re.sub(r'[<>:"\/\\\|\?\*]', "", file_path)
+  file_path = file_path.strip()
+  return file_path
 
 def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
   global word_frequency_dict 
@@ -245,6 +249,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
   # Grabs the title from the "entry-title" h1
   chapter_title_list = soup.find_all('h1', class_='entry-title')
   title = chapter_title_list[0].contents[0]
+  title = removeIllegalWindowsCharacters(title)
   if debug:
     gui_queue.put(title)
   gui_queue.put(f"\nCurrently Scraping {url} - {title}")
