@@ -130,8 +130,9 @@ def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
     contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
     contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
 
-  # Remove text from links
-  contentsToWrite = re.sub(r'(Previous chapter)?.*Next Chapter|', '', str(contentsToWrite), flags=re.I)
+  # We no longer use regex to remove "Next Chapter" text here, 
+  # as it malformed the HTML. The nodes are stripped safely via BeautifulSoup beforehand.
+  contentsToWrite = str(contentsToWrite)
   
   if format_choice == "epub":
     anchor_id = f"id{curPageNum}"
@@ -384,6 +385,17 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
     
     # Removes the .wordpress found on the site
     next_chapter_url = next_chapter_url.replace(".wordpress","")  
+
+  # Safely strip out the navigation links (Next Chapter / Previous Chapter) from the DOM
+  # so they don't appear in the compiled book. Done via BeautifulSoup to prevent HTML mangling.
+  for a_tag in chapter_paragraph_list.find_all("a"):
+    link_text = a_tag.get_text().lower()
+    if "next" in link_text or "previous" in link_text:
+      parent_p = a_tag.find_parent("p")
+      if parent_p:
+        parent_p.decompose()
+      else:
+        a_tag.decompose()
 
   # Write this chapter to file
   writeChapterToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
