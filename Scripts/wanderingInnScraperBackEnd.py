@@ -3,6 +3,7 @@ import csv
 import requests
 import re
 import json
+import zipfile
 from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
@@ -111,12 +112,15 @@ def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
       meta_file.write(title.encode('utf8'))
       meta_file.write("\n\r\n\r".encode("utf8"))
   else:
-    if (print_option != "One Large File"):
-      file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
-    if(print_option != "Individual Chapters"):
-      anchor_id = f"id{curPageNum}"
-      meta_file.write(f"<h2 id='{anchor_id}'>{title}</h2>".encode("utf8"))
-      toc_links.append((anchor_id, title))
+    if format_choice == "epub":
+      pass # Handled differently below
+    else:
+      if (print_option != "One Large File"):
+        file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
+      if(print_option != "Individual Chapters"):
+        anchor_id = f"id{curPageNum}"
+        meta_file.write(f"<h2 id='{anchor_id}'>{title}</h2>".encode("utf8"))
+        toc_links.append((anchor_id, title))
 
   if(format_choice == "txt"):
     # Remove all those pesky HTML tags
@@ -129,14 +133,24 @@ def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
   # Remove text from links
   contentsToWrite = re.sub(r'(Previous chapter)?.*Next Chapter|', '', str(contentsToWrite), flags=re.I)
   
-  file.write(str(contentsToWrite).encode("utf8"))
-  if(print_option == "Both"):
-    meta_file.write(str(contentsToWrite).encode("utf8"))  
+  if format_choice == "epub":
+    anchor_id = f"id{curPageNum}"
+    chapter_filename = f"chapter_{curPageNum:03d}.html"
+    xhtml = f'<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml">\n<head><title>{title}</title></head>\n<body>\n'
+    xhtml += f'<h1 id="{anchor_id}">{title}</h1>\n'
+    xhtml += contentsToWrite
+    xhtml += '\n</body>\n</html>'
+    meta_file.writestr(f"OEBPS/{chapter_filename}", xhtml)
+    toc_links.append((anchor_id, title, chapter_filename))
+  else:
+    file.write(str(contentsToWrite).encode("utf8"))
+    if(print_option == "Both"):
+      meta_file.write(str(contentsToWrite).encode("utf8"))  
 
-  if(format_choice != "txt"):
+  if(format_choice != "txt" and format_choice != "epub"):
     if(print_option != "One Large File"):
       file.write("</body></html>".encode("utf8"))
-  else:
+  elif format_choice == "txt":
     file.write(("-"*60).encode("utf8"))
     if(print_option == "Both"):
       meta_file.write(("-"*60).encode("utf8"))
@@ -208,9 +222,22 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   curPageNum = 1
   print_option = local_print_option
   toc_links = []
-  meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
-  if(print_option != "Individual Chapters" and format_choice == "html"):
-    meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
+  
+  if format_choice == "epub":
+    meta_file = zipfile.ZipFile(directory + f"/The Wandering Inn.epub", 'w', compression=zipfile.ZIP_DEFLATED)
+    # EPUB metadata requires mimetype to be uncompressed
+    meta_file.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+    container_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>'''
+    meta_file.writestr("META-INF/container.xml", container_xml)
+  else:
+    meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
+    if(print_option != "Individual Chapters" and format_choice == "html"):
+      meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
   
   # Grabs manual links if they exist in a links.json
   readLinkFile(gui_queue)
@@ -380,13 +407,49 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
   # Clean up if you're done
   if is_url_match(url, stop_page_url):
 
-    if(print_option != "Individual Chapters" and format_choice == "html"):
-      meta_file.write("""</body></html>""".encode("utf8"))
-    meta_file.close()
+    if format_choice == "epub":
+      # Generate content.opf (Manifest and Spine)
+      opf = '''<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:title>The Wandering Inn</dc:title>
+    <dc:language>en</dc:language>
+    <dc:identifier id="BookId">urn:uuid:12345</dc:identifier>
+  </metadata>
+  <manifest>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>'''
+      for _, _, filename in toc_links:
+        opf += f'\n    <item id="{filename}" href="{filename}" media-type="application/xhtml+xml"/>'
+      opf += '\n  </manifest>\n  <spine toc="ncx">'
+      for _, _, filename in toc_links:
+        opf += f'\n    <itemref idref="{filename}"/>'
+      opf += '\n  </spine>\n</package>'
+      meta_file.writestr("OEBPS/content.opf", opf)
 
-    # Inject TOC if applicable
-    if print_option != "Individual Chapters" and format_choice == "html" and len(toc_links) > 0:
-      gui_queue.put("Generating Table of Contents...")
+      # Generate toc.ncx (Table of Contents)
+      ncx = '''<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:uid" content="urn:uuid:12345"/></head>
+  <docTitle><text>The Wandering Inn</text></docTitle>
+  <navMap>'''
+      for idx, (anchor, toc_title, filename) in enumerate(toc_links, 1):
+        ncx += f'''\n    <navPoint id="navPoint-{idx}" playOrder="{idx}">
+      <navLabel><text>{toc_title}</text></navLabel>
+      <content src="{filename}#{anchor}"/>
+    </navPoint>'''
+      ncx += '\n  </navMap>\n</ncx>'
+      meta_file.writestr("OEBPS/toc.ncx", ncx)
+      
+      meta_file.close()
+
+    else:
+      if(print_option != "Individual Chapters" and format_choice == "html"):
+        meta_file.write("""</body></html>""".encode("utf8"))
+      meta_file.close()
+
+      # Inject TOC if applicable for HTML
+      if print_option != "Individual Chapters" and format_choice == "html" and len(toc_links) > 0:
+        gui_queue.put("Generating Table of Contents...")
       html_filepath = directory + f"/The Wandering Inn.{format_choice}"
       try:
         with open(html_filepath, 'rb') as f:

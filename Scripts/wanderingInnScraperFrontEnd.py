@@ -104,6 +104,9 @@ class WanderingInnScraperGUI:
     tk.Radiobutton(format_frame, text='HTML', variable=self.format_choice, value='html', 
                    bg=BG_COLOR, fg=FG_COLOR, selectcolor=BG_COLOR, activebackground=BG_COLOR, 
                    activeforeground=FG_COLOR, highlightthickness=0).pack(side=tk.LEFT, padx=(20, 0))
+    tk.Radiobutton(format_frame, text='EPUB (One Large File)', variable=self.format_choice, value='epub', 
+                   bg=BG_COLOR, fg=FG_COLOR, selectcolor=BG_COLOR, activebackground=BG_COLOR, 
+                   activeforeground=FG_COLOR, highlightthickness=0).pack(side=tk.LEFT, padx=(20, 0))
     
     tk.Frame(options_container, height=1, bd=0, bg=FG_COLOR).pack(fill=tk.X, pady=10)
     
@@ -151,7 +154,7 @@ class WanderingInnScraperGUI:
     messagebox.showinfo("About", f"Wandering Inn Scraper v{VERSION}\nby Josh Delgado")
 
   def get_debug_text(self):
-    text_type = "Plain text" if self.format_choice.get() == "txt" else "HTML"
+    text_type = "Plain text" if self.format_choice.get() == "txt" else ("HTML" if self.format_choice.get() == "html" else "EPUB")
     text = f"Type of output file: {self.print_option.get()}, {text_type}\n"
     text += f"Beginning Link: {self.beginning_link.get()}\n"
     text += f"Ending Link: {self.ending_link.get()}\n"
@@ -171,6 +174,10 @@ class WanderingInnScraperGUI:
 
     if not directory:
       messagebox.showwarning("Incomplete Information", "Make sure to choose a folder!")
+      return
+      
+    if format_choice == "epub" and print_option != "One Large File":
+      messagebox.showwarning("Invalid Selection", "EPUB format must be 'One Large File'. The EPUB will automatically isolate chapters internally.")
       return
 
     confirm_msg = f"Here's the info you input:\n\n{self.get_debug_text()}\nAre you sure you want to submit?"
