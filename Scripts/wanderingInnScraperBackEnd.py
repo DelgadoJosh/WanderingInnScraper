@@ -56,7 +56,7 @@ def readLinkFile(gui_queue):
   global next_links
 
   filename = "links.json"
-  filepath = os.getcwd() + "\\" + filename
+  filepath = os.path.join(os.getcwd(), filename)
   try: 
     file = open(filepath)
     json_text = file.read()

@@ -32,3 +32,7 @@ Version 1.6.1
 Version 1.6.2
 + Added support for chapter rewrites (stripping out unnecessary characters)
 + Set default
+
+Version 2.0.0 (Planned)
++ Added epub support
++ Updated UI (Uses tkinter instead of PySimpleGUI)
