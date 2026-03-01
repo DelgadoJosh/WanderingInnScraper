@@ -33,6 +33,20 @@ word_frequency_headers = [
   "last-appearance",
 ]
 
+def is_url_match(current_url, stop_url):
+  """Checks if the current URL matches the stop URL, accounting for 2017/2023 volume 1 rewrite differences."""
+  if current_url == stop_url:
+    return True
+  
+  # For volume 1 rewrite, the year might be 2017 or 2023. Let's make them match.
+  if "/rw1-" in current_url and "/rw1-" in stop_url:
+    current_clean = current_url.replace("/2017/", "/2023/")
+    stop_clean = stop_url.replace("/2017/", "/2023/")
+    if current_clean == stop_clean:
+      return True
+      
+  return False
+
 # Functiion that will read in a json file containing
 # manually inputted links if that file exists
 # This is for any unusual chapters where the "Next Chapter" link does not work
@@ -218,7 +232,7 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
         meta_file.close()
       return
 
-    if url == stop_page_url:
+    if is_url_match(url, stop_page_url):
       about_to_scrape_last_page = True
     
     url = scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_event)
@@ -358,7 +372,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
   csv_writer.writerow(chapter_info)
 
   # Clean up if you're done
-  if(url == stop_page_url):
+  if is_url_match(url, stop_page_url):
 
     if(print_option != "Individual Chapters" and format_choice == "html"):
       meta_file.write("""</body></html>""".encode("utf8"))
