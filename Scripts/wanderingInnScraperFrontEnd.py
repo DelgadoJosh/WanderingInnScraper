@@ -45,7 +45,7 @@ class WanderingInnScraperGUI:
     # Variables
     self.print_option = tk.StringVar(value='One Large File')
     self.format_choice = tk.StringVar(value='txt')
-    self.beginning_link = tk.StringVar(value="https://wanderinginn.com/2016/07/27/1-00/")
+    self.beginning_link = tk.StringVar(value="https://wanderinginn.com/2017/03/03/rw1-00/")
     self.ending_link = tk.StringVar(value="")
     self.folder_location = tk.StringVar(value="")
     
