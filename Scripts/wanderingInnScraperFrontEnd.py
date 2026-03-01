@@ -1,29 +1,36 @@
 # This code creates a simple GUI to run the Wandering Inn Scraper using tkinter
 import sys
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox, scrolledtext
 import queue
 import threading 
 import wanderingInnScraperBackEnd as backend
+
+VERSION = "1.7.0"
+
+# Colors matching the screenshot (Dark Brown theme)
+BG_COLOR = "#2b2b28"
+FG_COLOR = "#ffff00"  # Yellow/Gold
+INPUT_BG = "#4d4d4d"
+BTN_BG = "#3b5a6b"   # Teal/Blueish
+BTN_FG = "#ffffff"
 
 class WanderingInnScraperGUI:
   def __init__(self, root):
     self.root = root
     self.root.title(f"Wandering Inn Scraper v{VERSION}")
-    self.root.geometry("1000x600")
-    
-    # Configure styles
-    style = ttk.Style()
-    style.theme_use('clam') # Using clam as it's cleaner than default on many systems
+    self.root.geometry("1000x500")
+    self.root.configure(bg=BG_COLOR)
     
     # Variables
     self.print_option = tk.StringVar(value='One Large File')
     self.format_choice = tk.StringVar(value='txt')
-    self.beginning_link = tk.StringVar(value="https://wanderinginn.com/2017/03/03/rw1-00/")
+    self.beginning_link = tk.StringVar(value="https://wanderinginn.com/2016/07/27/1-00/")
     self.ending_link = tk.StringVar(value="")
     self.folder_location = tk.StringVar(value="")
     
     self.gui_queue = queue.Queue()
+    self.stop_event = threading.Event()
     
     self.setup_menu()
     self.setup_layout()
@@ -47,52 +54,62 @@ class WanderingInnScraperGUI:
     self.root.config(menu=menubar)
 
   def setup_layout(self):
-    # Main container with padding
-    main_frame = ttk.Frame(self.root, padding="10")
+    # Main container
+    main_frame = tk.Frame(self.root, bg=BG_COLOR, padx=10, pady=10)
     main_frame.pack(fill=tk.BOTH, expand=True)
     
     # Left Side - Options
-    options_frame = ttk.LabelFrame(main_frame, text="Options", padding="10")
-    options_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 10))
+    options_container = tk.LabelFrame(main_frame, text="Options", bg=BG_COLOR, fg=FG_COLOR, padx=10, pady=10)
+    options_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 10))
     
+    # Internal width for consistency
+    opt_width = 45
+
     # Output type
-    ttk.Label(options_frame, text="Please select what type of output file:").pack(anchor=tk.W, pady=(0, 5))
+    tk.Label(options_container, text="Please select what type of output file:", bg=BG_COLOR, fg=FG_COLOR).pack(anchor=tk.W)
+    
     options = ['One Large File', 'Individual Chapters', 'Both']
-    option_menu = ttk.OptionMenu(options_frame, self.print_option, options[0], *options)
-    option_menu.pack(fill=tk.X, pady=(0, 10))
+    self.option_menu = tk.OptionMenu(options_container, self.print_option, *options)
+    self.option_menu.config(bg=INPUT_BG, fg=FG_COLOR, activebackground=INPUT_BG, activeforeground=FG_COLOR, width=opt_width, highlightthickness=0)
+    self.option_menu["menu"].config(bg=INPUT_BG, fg=FG_COLOR)
+    self.option_menu.pack(pady=(5, 10))
     
     # Format choice
-    format_frame = ttk.Frame(options_frame)
+    format_frame = tk.Frame(options_container, bg=BG_COLOR)
     format_frame.pack(fill=tk.X, pady=(0, 10))
-    ttk.Radiobutton(format_frame, text='Plain text', variable=self.format_choice, value='txt').pack(side=tk.LEFT, padx=(0, 10))
-    ttk.Radiobutton(format_frame, text='HTML', variable=self.format_choice, value='html').pack(side=tk.LEFT)
+    tk.Radiobutton(format_frame, text='Plain text', variable=self.format_choice, value='txt', bg=BG_COLOR, fg=FG_COLOR, selectcolor=BG_COLOR, activebackground=BG_COLOR, activeforeground=FG_COLOR).pack(side=tk.LEFT)
+    tk.Radiobutton(format_frame, text='HTML', variable=self.format_choice, value='html', bg=BG_COLOR, fg=FG_COLOR, selectcolor=BG_COLOR, activebackground=BG_COLOR, activeforeground=FG_COLOR).pack(side=tk.LEFT, padx=(20, 0))
     
-    ttk.Separator(options_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+    tk.Frame(options_container, height=2, bd=1, relief=tk.SUNKEN, bg=FG_COLOR).pack(fill=tk.X, pady=10)
     
     # Links
-    ttk.Label(options_frame, text="First page to scrape from").pack(anchor=tk.W)
-    ttk.Entry(options_frame, textvariable=self.beginning_link, width=50).pack(fill=tk.X, pady=(0, 10))
+    tk.Label(options_container, text="First page to scrape from", bg=BG_COLOR, fg=FG_COLOR).pack(anchor=tk.W)
+    tk.Entry(options_container, textvariable=self.beginning_link, width=opt_width+5, bg=INPUT_BG, fg=FG_COLOR, insertbackground=FG_COLOR, borderwidth=1).pack(pady=(0, 10))
     
-    ttk.Label(options_frame, text="Final page to scrape from (inclusive)").pack(anchor=tk.W)
-    ttk.Entry(options_frame, textvariable=self.ending_link, width=50).pack(fill=tk.X, pady=(0, 10))
+    tk.Label(options_container, text="Final page to scrape from (inclusive)", bg=BG_COLOR, fg=FG_COLOR).pack(anchor=tk.W)
+    tk.Entry(options_container, textvariable=self.ending_link, width=opt_width+5, bg=INPUT_BG, fg=FG_COLOR, insertbackground=FG_COLOR, borderwidth=1).pack(pady=(0, 10))
     
-    ttk.Separator(options_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+    tk.Frame(options_container, height=2, bd=1, relief=tk.SUNKEN, bg=FG_COLOR).pack(fill=tk.X, pady=10)
     
     # Folder Choice
-    ttk.Label(options_frame, text="Please choose a destination folder").pack(anchor=tk.W)
-    folder_frame = ttk.Frame(options_frame)
-    folder_frame.pack(fill=tk.X, pady=(0, 20))
-    ttk.Entry(folder_frame, textvariable=self.folder_location).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-    ttk.Button(folder_frame, text="Browse", command=self.browse_folder).pack(side=tk.RIGHT)
+    tk.Label(options_container, text="Please choose a destination folder", bg=BG_COLOR, fg=FG_COLOR).pack(anchor=tk.W)
+    folder_inner = tk.Frame(options_container, bg=BG_COLOR)
+    folder_inner.pack(fill=tk.X, pady=(5, 20))
+    tk.Label(folder_inner, text="Your Folder", bg=BG_COLOR, fg=FG_COLOR).pack(side=tk.LEFT, padx=(0, 5))
+    tk.Entry(folder_inner, textvariable=self.folder_location, bg=INPUT_BG, fg=FG_COLOR, insertbackground=FG_COLOR, width=30).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+    tk.Button(folder_inner, text="Browse", command=self.browse_folder, bg=BTN_BG, fg=BTN_FG, activebackground=BTN_BG, activeforeground=BTN_FG).pack(side=tk.LEFT)
     
-    # Submit Button
-    ttk.Button(options_frame, text="Submit", command=self.on_submit).pack(pady=10)
+    # Submit & Stop Buttons
+    btn_frame = tk.Frame(options_container, bg=BG_COLOR)
+    btn_frame.pack(anchor=tk.W)
+    tk.Button(btn_frame, text="Submit", command=self.on_submit, bg=BTN_BG, fg=BTN_FG, activebackground=BTN_BG, activeforeground=BTN_FG).pack(side=tk.LEFT, padx=(0, 10))
+    tk.Button(btn_frame, text="Stop Program", command=self.on_stop, bg=BTN_BG, fg=BTN_FG, activebackground=BTN_BG, activeforeground=BTN_FG).pack(side=tk.LEFT)
     
     # Right Side - Console Log
-    console_frame = ttk.LabelFrame(main_frame, text="Console Log", padding="10")
-    console_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    console_container = tk.LabelFrame(main_frame, text="Console Log", bg=BG_COLOR, fg=FG_COLOR, padx=10, pady=10)
+    console_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     
-    self.console = scrolledtext.ScrolledText(console_frame, state='disabled', wrap=tk.WORD, font=('TkFixedFont', 10))
+    self.console = scrolledtext.ScrolledText(console_container, state='disabled', wrap=tk.WORD, font=('TkFixedFont', 10), bg=BG_COLOR, fg=FG_COLOR, insertbackground=FG_COLOR)
     self.console.pack(fill=tk.BOTH, expand=True)
 
   def browse_folder(self):
@@ -129,9 +146,15 @@ class WanderingInnScraperGUI:
     confirm_msg = f"Here's the info you input:\n\n{self.get_debug_text()}\nAre you sure you want to submit?"
     if messagebox.askyesno("Confirm", confirm_msg):
       self.log("Beginning Program\n")
+      self.stop_event.clear()
       threading.Thread(target=backend.scrapePageInit,
-              args=(start_url, end_url, print_option, directory, format_choice, self.gui_queue), 
+              args=(start_url, end_url, print_option, directory, format_choice, self.gui_queue, self.stop_event), 
               daemon=True).start()
+
+  def on_stop(self):
+    if not self.stop_event.is_set():
+      self.stop_event.set()
+      self.log("\nStop signal sent. Finishing current chapter and stopping...")
 
   def log(self, text):
     self.console.config(state='normal')

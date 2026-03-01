@@ -175,7 +175,7 @@ def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
   return chapter_word_count
 
 # Function to initialize scraping the page.
-def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue):
+def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue, stop_event=None):
   global print_option 
   global meta_file 
   global word_count
@@ -208,10 +208,20 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   about_to_scrape_last_page = False
   url = start_page_url
   while True:
+    if stop_event and stop_event.is_set():
+      gui_queue.put("Stop signal received. Cleaning up...")
+      if not csv_file.closed:
+        printWordFrequency()
+        printStats(directory, word_count)
+        csv_file.close()
+      if not meta_file.closed:
+        meta_file.close()
+      return
+
     if url == stop_page_url:
       about_to_scrape_last_page = True
     
-    url = scrapePage(url, stop_page_url, directory, format_choice, gui_queue)
+    url = scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_event)
     
     # If we just scraped the final page, stop
     if about_to_scrape_last_page:
@@ -219,7 +229,7 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
 
 
 # Function to scrape the page using Python BeautifulSoup, returns the next url
-def scrapePage(url, stop_page_url, directory, format_choice, gui_queue):
+def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_event=None):
   global curPageNum
   global word_count
   global print_option
