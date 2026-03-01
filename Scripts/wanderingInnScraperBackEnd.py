@@ -17,7 +17,7 @@ print_option = ''
 headers = {
   # This header is used to mark the webscraper so the server knows
   # who's currently scraping it.
-  'User-Agent': 'An interested fan',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'From': 'fak3unknown1@gmail.com'
 }
 csv_file_headers = [
@@ -251,14 +251,23 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
     gui_queue.put(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
 
   # Accesses the page
-  page = requests.get(url, headers)
+  page = requests.get(url, headers=headers)
 
   # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
   soup = BeautifulSoup(page.text, 'html.parser')
 
-  # Grabs the title from the "entry-title" h1
-  chapter_title_list = soup.find_all('h1', class_='entry-title')
-  title = chapter_title_list[0].contents[0]
+  # Grabs the title from the new "elementor-heading-title" class, falling back to "entry-title"
+  chapter_title_list = soup.find_all(class_='elementor-heading-title')
+  if not chapter_title_list:
+    chapter_title_list = soup.find_all('h1', class_='entry-title')
+    
+  title = "Unknown Title"
+  if chapter_title_list:
+    for t in chapter_title_list:
+      if t.text.strip():
+        title = t.text.strip()
+        break
+        
   title = removeIllegalWindowsCharacters(title)
   if debug:
     gui_queue.put(title)
@@ -273,37 +282,34 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
     file = open(fileTitleDirectory, "wb")
 
 
-  # Pull all text from the "entry-content" div
-  chapter_paragraph_list = soup.find(class_='entry-content')
+  # Pull all text from the new "twi-article" div, fallback to "entry-content"
+  chapter_paragraph_list = soup.find(class_='twi-article')
+  if not chapter_paragraph_list:
+    chapter_paragraph_list = soup.find(class_='entry-content')
+    
+  if not chapter_paragraph_list:
+    gui_queue.put(f"ERROR: Could not find article content at {url}")
+    return ""
   
-  # Pull text from all instances of <p> tag within BodyText div
+  # Pull text from all instances of <p> tag within the container
   chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
 
-  # Grabs the final paragraph tag (which contains the next chapter)
-  last_paragraph_item = chapter_paragraph_list_items[-1]
-  if debug:
-    gui_queue.put(f'Last item: {last_paragraph_item.contents[0]}')
-  link_list = last_paragraph_item.find_all('a') # Grabs the <a> tags
-  
   # Grabs the next chapter link
   # Will use the manual link if it exists
+  next_chapter_url = ""
   if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
     next_chapter_url = next_links["AfterLinks"][url]
   else:
-    # Grabs the final paragraph that has an a tag
-    for paragraph_item in reversed(chapter_paragraph_list_items):
-      cur_link_list = paragraph_item.find_all('a')
-      if(len(cur_link_list) > 0):
-        link_list = cur_link_list
-        break
+    # Explicitly search for "Next Chapter", "Next chapter", etc. in the article
+    next_links_search = chapter_paragraph_list.find_all("a", string=lambda s: s and ("next chapter" in s.lower() or "next" in s.lower()))
     
-    # Quits if there is no next chapter link found
-    if(len(link_list) == 0):
+    if len(next_links_search) == 0:
       gui_queue.put("Stopped due to no next_chapter_link found")
       printStats(directory, word_count)
       file.close()
-      return
-    next_chapter_link = link_list[-1]  # Grabs the final link to the next one
+      return ""
+      
+    next_chapter_link = next_links_search[-1]  # Grabs the final link to the next one
     next_chapter_url = next_chapter_link.get('href')
     
     # Removes the .wordpress found on the site
