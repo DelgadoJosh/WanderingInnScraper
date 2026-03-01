@@ -260,18 +260,36 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
   # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
   soup = BeautifulSoup(page.text, 'html.parser')
 
-  # Grabs the title from the new "elementor-heading-title" class, falling back to "entry-title"
-  chapter_title_list = soup.find_all(class_='elementor-heading-title')
-  if not chapter_title_list:
-    chapter_title_list = soup.find_all('h1', class_='entry-title')
+  title = None
+  
+  # 1. Try meta og:title (most reliable)
+  meta_title = soup.find("meta", property="og:title")
+  if meta_title and meta_title.get("content"):
+    title = meta_title.get("content").strip()
+
+  # 2. Try standard <title> tag
+  if not title:
+    title_tag = soup.find('title')
+    if title_tag and title_tag.text:
+      title = title_tag.text.split('-')[0].strip() # e.g. "1.00 - The Wandering Inn" -> "1.00"
+
+  # 3. Try visible headers, but ignore "loading..."
+  if not title:
+    chapter_title_list = soup.find_all(class_='elementor-heading-title')
+    if not chapter_title_list:
+      chapter_title_list = soup.find_all('h1', class_='entry-title')
     
-  title = "Unknown Title"
-  if chapter_title_list:
     for t in chapter_title_list:
-      if t.text.strip():
-        title = t.text.strip()
+      t_text = t.text.strip()
+      if t_text and "loading" not in t_text.lower():
+        title = t_text
         break
-        
+
+  # 4. Fallback: Parse from URL
+  if not title:
+    raw_url = url.rstrip('/') # Remove trailing slash if present
+    url_part = raw_url.split('/')[-1] # Gets "rw1-00"
+    title = url_part.replace('-', '.').capitalize() # Gets "Rw1.00"
   title = removeIllegalWindowsCharacters(title)
   if debug:
     gui_queue.put(title)
