@@ -204,9 +204,9 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   word_frequency_filename = directory + '/000 Word Frequency.csv'
   word_frequency_dict = {}
 
-  # Scrape until you reach the ending url
   about_to_scrape_last_page = False
   url = start_page_url
+  import time
   while True:
     if stop_event and stop_event.is_set():
       gui_queue.put("Stop signal received. Cleaning up...")
@@ -226,6 +226,10 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
     # If we just scraped the final page, stop
     if about_to_scrape_last_page:
       return
+      
+    # 3-second delay between chapters
+    gui_queue.put("Pausing for 3 seconds...")
+    time.sleep(3)
 
 
 # Function to scrape the page using Python BeautifulSoup, returns the next url
