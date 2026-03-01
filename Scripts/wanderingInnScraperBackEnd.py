@@ -14,6 +14,7 @@ if debug:
   meta_file = open("00000 META.txt", "wb")
 next_links = None
 print_option = ''
+toc_links = []
 headers = {
   # This header is used to mark the webscraper so the server knows
   # who's currently scraping it.
@@ -113,7 +114,9 @@ def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
     if (print_option != "One Large File"):
       file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
     if(print_option != "Individual Chapters"):
-      meta_file.write(f"<h2 id='id{curPageNum}'>{title}</h2>".encode("utf8"))
+      anchor_id = f"id{curPageNum}"
+      meta_file.write(f"<h2 id='{anchor_id}'>{title}</h2>".encode("utf8"))
+      toc_links.append((anchor_id, title))
 
   if(format_choice == "txt"):
     # Remove all those pesky HTML tags
@@ -199,9 +202,12 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
   global csv_file_headers
   global word_frequency_filename
   global word_frequency_dict
+  global toc_links
+  
   word_count = 0
   curPageNum = 1
   print_option = local_print_option
+  toc_links = []
   meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
   if(print_option != "Individual Chapters" and format_choice == "html"):
     meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
@@ -377,6 +383,30 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
     if(print_option != "Individual Chapters" and format_choice == "html"):
       meta_file.write("""</body></html>""".encode("utf8"))
     meta_file.close()
+
+    # Inject TOC if applicable
+    if print_option != "Individual Chapters" and format_choice == "html" and len(toc_links) > 0:
+      gui_queue.put("Generating Table of Contents...")
+      html_filepath = directory + f"/The Wandering Inn.{format_choice}"
+      try:
+        with open(html_filepath, 'rb') as f:
+          content_bytes = f.read()
+          
+        insertion_marker = "<h1>The Wandering Inn</h1><hr/>".encode("utf8")
+        insert_idx = content_bytes.find(insertion_marker)
+        
+        if insert_idx != -1:
+          insert_idx += len(insertion_marker)
+          toc_html = "<h2>Table of Contents</h2><ul>"
+          for anchor, toc_title in toc_links:
+            toc_html += f"<li><a href='#{anchor}'>{toc_title}</a></li>"
+          toc_html += "</ul><hr/>"
+          
+          new_content = content_bytes[:insert_idx] + toc_html.encode("utf8") + content_bytes[insert_idx:]
+          with open(html_filepath, 'wb') as f:
+            f.write(new_content)
+      except Exception as e:
+        gui_queue.put(f"Failed to generate Table of Contents: {e}")
 
     csv_file.close()
     
