@@ -290,6 +290,7 @@ def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_eve
     raw_url = url.rstrip('/') # Remove trailing slash if present
     url_part = raw_url.split('/')[-1] # Gets "rw1-00"
     title = url_part.replace('-', '.').capitalize() # Gets "Rw1.00"
+
   title = removeIllegalWindowsCharacters(title)
   if debug:
     gui_queue.put(title)
