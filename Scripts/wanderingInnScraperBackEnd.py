@@ -66,9 +66,11 @@ def printWordFrequency():
   global word_frequency_filename
   global word_frequency_dict
   word_frequency_headers = ["word", "frequency", "first-appearance", "last-appearance"]
+  # Note: Make sure to use Unicode encoding (Specifically for 1.06 R "Dogeza")
   with open(word_frequency_filename, mode='w', newline='', encoding='utf-8') as csv_file:
     csv_writer_word_freq = csv.DictWriter(csv_file, fieldnames=word_frequency_headers)
     csv_writer_word_freq.writeheader()
+    # Write the rows in decreasing order by their frequency
     for word in sorted(word_frequency_dict, key=lambda x: (word_frequency_dict[x]["frequency"]), reverse=True):
       csv_writer_word_freq.writerow(word_frequency_dict[word])
 
@@ -88,11 +90,15 @@ def writeChapterToFile(filepath, title, contentsToWrite, source_url):
   os.replace(temp_filepath, filepath)
 
 # Function to remove punctuation
+# TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
 def removePunctuation(word):
   word = re.sub(r"[“”,;]", "", word)
   word = word.rstrip('.') 
   word = word.rstrip('?')
   word = word.rstrip('!')
+  # Used rstrip to remove the periods at end of sentences. 
+  # Not in the regex because it may be part of a word, or elipses...
+  # Apostrophe's also may be part of a name (Az'kerash)
   return word
 
 # Removes all illegal characters so a file/folder can be created successfully in Windows
@@ -106,6 +112,8 @@ def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
   global word_frequency_dict 
   chapter_word_count = 0
   for chapter_paragraph in paragraph_list:
+
+    # Goes through every tag within the paragraph.
     for chapter_paragraph_part in chapter_paragraph.contents:
       text = chapter_paragraph_part
       if(not(isinstance(chapter_paragraph_part, NavigableString))):  
@@ -114,14 +122,20 @@ def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
       split_text = text.split()
       for word in split_text:
         word = removePunctuation(word)
+
+        # Update the dictionary of word frequencies
         if word not in word_frequency_dict:
+          # If it's not in the dictionary, this is the first time it's been seen
           word_frequency_dict[word] = {}
           word_frequency_dict[word]["word"] = word
           word_frequency_dict[word]["frequency"] = 0
           word_frequency_dict[word]["first-appearance"] = title
+        
         word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
         word_frequency_dict[word]["last-appearance"] = title
+      
       chapter_word_count += len(split_text)
+  
   return chapter_word_count
 
 # Function to scan the existing files in a directory to find the last valid chapter.
@@ -201,6 +215,7 @@ def scrapePageInit(start_page_url, stop_page_url, print_option, directory, forma
   if not is_resuming:
     csv_writer.writeheader()
 
+  # Setup the necessary info to create a file for the word frequency
   word_frequency_filename = os.path.join(directory, '000 Word Frequency.csv')
   word_frequency_dict = {}
 
@@ -228,6 +243,7 @@ def scrapePageInit(start_page_url, stop_page_url, print_option, directory, forma
     if url == "" or not url:
       break
     
+    # If we just scraped the final page, stop
     if about_to_scrape_last_page:
       gui_queue.put("\nReached the stopping page url, stopping scrape.")
       gui_queue.put("="*60)
@@ -238,9 +254,9 @@ def scrapePageInit(start_page_url, stop_page_url, print_option, directory, forma
       printStats(directory, word_count)
       csv_file.close()
       return
-      
+    
     sleep_time = random.uniform(5.0, 9.0)
-    gui_queue.put(f"Pausing for {sleep_time:.1f} seconds to simulate human reading...")
+    gui_queue.put(f"Pausing for {sleep_time:.1f} seconds to simulate human reading...\n")
     time.sleep(sleep_time)
 
 
@@ -258,9 +274,13 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   if not is_resuming_fetch:
     if debug: gui_queue.put(f"\nCurrently at {url}.")
 
+# Appends a '/' at the end if it's not seen in the url
+  # This is to allow the inputted "stop" address to stop if it 
+  # encounters an address that does not end in a '/'
   if(url[len(url)-1] != '/'):
     url += '/'
   
+  # Accesses the page
   try:
     page = scraper.get(url, timeout=15)
   except Exception as e:
@@ -269,18 +289,23 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
     if stop_event: stop_event.set()
     return url
 
+  # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
   soup = BeautifulSoup(page.text, 'html.parser')
   title = None
   
+  # == Title Handling ==
+  # 1. Try meta og:title (most reliable)
   meta_title = soup.find("meta", property="og:title")
   if meta_title and meta_title.get("content"):
     title = meta_title.get("content").strip()
 
+  # 2. Try standard <title> tag
   if not title:
     title_tag = soup.find('title')
     if title_tag and title_tag.text:
       title = title_tag.text.split('-')[0].strip()
 
+  # 3. Try visible headers, but ignore "loading..."
   if not title:
     chapter_title_list = soup.find_all(class_='elementor-heading-title')
     if not chapter_title_list:
@@ -291,6 +316,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
         title = t_text
         break
 
+  # 4. Fallback: Parse from URL
   if not title:
     raw_url = url.rstrip('/')
     url_part = raw_url.split('/')[-1]
@@ -300,6 +326,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   if not is_resuming_fetch:
     gui_queue.put(f"Scraping: {url} - {title}")
 
+  # Pull all text from the new "twi-article" div, fallback to "entry-content"
   chapter_paragraph_list = soup.find(class_='twi-article')
   if not chapter_paragraph_list:
     chapter_paragraph_list = soup.find(class_='entry-content')
@@ -310,8 +337,11 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
     if stop_event: stop_event.set()
     return url
   
+  # Pull text from all instances of <p> tag within the container
   chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
 
+  # Grabs the next chapter link
+  # Will use the manual link if it exists
   next_chapter_url = ""
   if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
     next_chapter_url = next_links["AfterLinks"][url]
@@ -325,33 +355,43 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
       
     next_chapter_link = next_links_search[-1]
     next_chapter_url = next_chapter_link.get('href')
+    # Removes the .wordpress found on the site
     next_chapter_url = next_chapter_url.replace(".wordpress","")  
 
   if is_resuming_fetch:
     return next_chapter_url
 
+ # Safely strip out the navigation links (Next Chapter / Previous Chapter) from the DOM
+  # so they don't appear in the compiled book. Done via BeautifulSoup to prevent HTML mangling.
   for a_tag in chapter_paragraph_list.find_all("a"):
     link_text = a_tag.get_text().lower()
+    # Explicitly search for "Next Chapter", "Next chapter", etc. in the article
     if "next" in link_text or "previous" in link_text:
       parent_p = a_tag.find_parent("p")
       if parent_p: parent_p.decompose()
       else: a_tag.decompose()
 
+  # Creates a file for this specific chapter, only if needed
   fileTitle = f"{curPageNum:03d} {title}.html"
   fileTitleDirectory = os.path.join(directory, fileTitle)
 
+# Write this chapter to file
   writeChapterToFile(fileTitleDirectory, title, chapter_paragraph_list, url)
   
+  # Grab the word count, but don't include the final "paragraph" which is just the next chapter links
   chapter_word_count = getChapterWordCountAndUpdateWordFrequencies(chapter_paragraph_list_items[:-1], title)
   word_count += chapter_word_count
   gui_queue.put(f"Word Count: {word_count}, Chapter Word: {chapter_word_count}")
   curPageNum += 1
 
+  # Create a dictionary of information for the chapter
   chapter_info = {}
   chapter_info["title"] = title 
   chapter_info["link"] = url
   chapter_info["chapter_word_count"] = chapter_word_count
   chapter_info["total_word_count"] = word_count
+
+  # Writes the chapter info to the csv file
   csv_writer.writerow(chapter_info)
 
   return next_chapter_url
