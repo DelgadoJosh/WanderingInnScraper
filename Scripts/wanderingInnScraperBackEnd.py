@@ -288,6 +288,12 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   
   for attempt in range(max_retries):
     try:
+      if attempt > 0:
+        gui_queue.put(f"Attempting to scrape {url} (Attempt {attempt+1}/{max_retries})...")
+      else:
+        if not is_resuming_fetch:
+          gui_queue.put(f"\nAttempting to scrape {url}...")
+      
       page = scraper.get(url, timeout=15)
       soup = BeautifulSoup(page.text, 'html.parser')
       
