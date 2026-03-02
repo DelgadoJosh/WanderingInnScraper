@@ -280,17 +280,39 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   if(url[len(url)-1] != '/'):
     url += '/'
   
-  # Accesses the page
-  try:
-    page = scraper.get(url, timeout=15)
-  except Exception as e:
-    gui_queue.put(f"Network Error: Failed to fetch {url}. ({e})")
-    gui_queue.put("Stopping scrape. You can resume safely later.")
-    if stop_event: stop_event.set()
-    return url
+  # Accesses the page, with 3 retry attempts for VPN/Cloudflare blocks
+  max_retries = 3
+  page = None
+  soup = None
+  chapter_paragraph_list = None
+  
+  for attempt in range(max_retries):
+    try:
+      page = scraper.get(url, timeout=15)
+      soup = BeautifulSoup(page.text, 'html.parser')
+      
+      # Pull all text from the new "twi-article" div, fallback to "entry-content"
+      chapter_paragraph_list = soup.find(class_='twi-article')
+      if not chapter_paragraph_list:
+        chapter_paragraph_list = soup.find(class_='entry-content')
+        
+      if not chapter_paragraph_list:
+        raise Exception("Article content container not found (Possible VPN/Cloudflare block).")
+      else:
+        break # Success! Escape the retry loop
+        
+    except Exception as e:
+      if attempt < max_retries - 1:
+        gui_queue.put(f"Blocking Issue Detected (Attempt {attempt+1}/{max_retries}): {e}")
+        gui_queue.put("Re-initializing Cloudscraper session to dump tokens, waiting 10 seconds...\n")
+        time.sleep(10)
+        scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
+      else:
+        gui_queue.put(f"Network Error/Block persisting after {max_retries} attempts: Failed to fetch {url}.")
+        gui_queue.put("Stopping scrape. You can resume safely later.")
+        if stop_event: stop_event.set()
+        return url
 
-  # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
-  soup = BeautifulSoup(page.text, 'html.parser')
   title = None
   
   # == Title Handling ==
@@ -325,17 +347,6 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   title = removeIllegalWindowsCharacters(title)
   if not is_resuming_fetch:
     gui_queue.put(f"Scraping: {url} - {title}")
-
-  # Pull all text from the new "twi-article" div, fallback to "entry-content"
-  chapter_paragraph_list = soup.find(class_='twi-article')
-  if not chapter_paragraph_list:
-    chapter_paragraph_list = soup.find(class_='entry-content')
-    
-  if not chapter_paragraph_list:
-    gui_queue.put(f"ERROR: Could not find article content at {url}. You might be blocked.")
-    gui_queue.put("Stopping scrape. Use Resume later.")
-    if stop_event: stop_event.set()
-    return url
   
   # Pull text from all instances of <p> tag within the container
   chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
