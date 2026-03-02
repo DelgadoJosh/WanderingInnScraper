@@ -274,7 +274,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   if not is_resuming_fetch:
     if debug: gui_queue.put(f"\nCurrently at {url}.")
 
-# Appends a '/' at the end if it's not seen in the url
+  # Appends a '/' at the end if it's not seen in the url
   # This is to allow the inputted "stop" address to stop if it 
   # encounters an address that does not end in a '/'
   if(url[len(url)-1] != '/'):
@@ -361,7 +361,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   if is_resuming_fetch:
     return next_chapter_url
 
- # Safely strip out the navigation links (Next Chapter / Previous Chapter) from the DOM
+  # Safely strip out the navigation links (Next Chapter / Previous Chapter) from the DOM
   # so they don't appear in the compiled book. Done via BeautifulSoup to prevent HTML mangling.
   for a_tag in chapter_paragraph_list.find_all("a"):
     link_text = a_tag.get_text().lower()
@@ -375,7 +375,7 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
   fileTitle = f"{curPageNum:03d} {title}.html"
   fileTitleDirectory = os.path.join(directory, fileTitle)
 
-# Write this chapter to file
+  # Write this chapter to file
   writeChapterToFile(fileTitleDirectory, title, chapter_paragraph_list, url)
   
   # Grab the word count, but don't include the final "paragraph" which is just the next chapter links
