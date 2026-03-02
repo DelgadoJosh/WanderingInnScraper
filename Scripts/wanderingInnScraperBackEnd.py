@@ -4,6 +4,10 @@ import requests
 import re
 import json
 import zipfile
+import time
+import random
+import glob
+import cloudscraper
 from bs4 import BeautifulSoup
 from bs4 import NavigableString
 
@@ -11,163 +15,72 @@ from bs4 import NavigableString
 curPageNum = 1
 word_count = 0
 debug = False
-if debug:
-  meta_file = open("00000 META.txt", "wb")
 next_links = None
-print_option = ''
-toc_links = []
 headers = {
-  # This header is used to mark the webscraper so the server knows
-  # who's currently scraping it.
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'From': 'fak3unknown1@gmail.com'
 }
-csv_file_headers = [
-  "title",
-  "link",
-  "chapter_word_count",
-  "total_word_count",
-]
-word_frequency_headers = [
-  "word",
-  "frequency",
-  "first-appearance",
-  "last-appearance",
-]
+scraper = None
 
 def is_url_match(current_url, stop_url):
-  """Checks if the current URL matches the stop URL, accounting for 2017/2023 volume 1 rewrite differences."""
   if current_url == stop_url:
     return True
-  
-  # For volume 1 rewrite, the year might be 2017 or 2023. Let's make them match.
   if "/rw1-" in current_url and "/rw1-" in stop_url:
     current_clean = current_url.replace("/2017/", "/2023/")
     stop_clean = stop_url.replace("/2017/", "/2023/")
     if current_clean == stop_clean:
       return True
-      
   return False
 
-# Functiion that will read in a json file containing
-# manually inputted links if that file exists
-# This is for any unusual chapters where the "Next Chapter" link does not work
 def readLinkFile(gui_queue):
   global next_links
-
   filename = "links.json"
   filepath = os.path.join(os.getcwd(), filename)
   try: 
-    file = open(filepath)
-    json_text = file.read()
-    next_links = json.loads(json_text)
+    with open(filepath, 'r') as file:
+      json_text = file.read()
+      next_links = json.loads(json_text)
   except Exception as e:
-    gui_queue.put(f"WARNING: No links.json detected, so no manual links were loaded")
-    gui_queue.put(f"The program could not locate it at {filepath}")
-    gui_queue.put(f" ")
-    gui_queue.put(f"[DEBUG] Here's the details on the specific Exception: {e}")
-    gui_queue.put(f" ")
-    gui_queue.put(f"It's fine to run regardless, just be weary of any looping at the end of Volume 7!")
+    gui_queue.put(f"WARNING: No links.json detected.")
     return
 
-
-# Function that creates a stat page.
-# At the moment, it only has the total word count
 def printStats(directory, word_count): 
   fileTitle = "000 STATS.txt"
-  fileTitleDirectory = directory + "/" + fileTitle
-  file = open(fileTitleDirectory, "wb")
-
-  stringToWrite = "Wandering Inn Stats\r\n"
-  file.write(stringToWrite.encode('utf8'))
-
-  stringToWrite = f"Word Count: {word_count}"
-  file.write(stringToWrite.encode('utf8'))
-  file.close()
-
+  fileTitleDirectory = os.path.join(directory, fileTitle)
+  with open(fileTitleDirectory, "wb") as file:
+    stringToWrite = "Wandering Inn Stats\r\n"
+    file.write(stringToWrite.encode('utf8'))
+    stringToWrite = f"Word Count: {word_count}"
+    file.write(stringToWrite.encode('utf8'))
 
 def printWordFrequency():
-  global word_frequency_headers
   global word_frequency_filename
   global word_frequency_dict
-
-  # Note: Make sure to use Unicode encoding (Specifically for 1.06 R "Dogeza")
+  word_frequency_headers = ["word", "frequency", "first-appearance", "last-appearance"]
   with open(word_frequency_filename, mode='w', newline='', encoding='utf-8') as csv_file:
     csv_writer_word_freq = csv.DictWriter(csv_file, fieldnames=word_frequency_headers)
     csv_writer_word_freq.writeheader()
-
-    # Write the rows in decreasing order by their frequency
     for word in sorted(word_frequency_dict, key=lambda x: (word_frequency_dict[x]["frequency"]), reverse=True):
       csv_writer_word_freq.writerow(word_frequency_dict[word])
 
-
-# Function that handles writing the chapter to a file.
-def writeChapterToFile(file, title, contentsToWrite, format_choice, gui_queue):
-  global meta_file
-  global print_option
-  if(format_choice == "txt"):
-    file.write(title.encode('utf8'))
-    file.write("\n\r\n\r".encode("utf8"))
-    if(print_option == "Both"):
-      meta_file.write(title.encode('utf8'))
-      meta_file.write("\n\r\n\r".encode("utf8"))
-  else:
-    if format_choice == "epub":
-      pass # Handled differently below
-    else:
-      if (print_option != "One Large File"):
-        file.write(f"""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>{title}</title></head><body><h1>{title}</h1>""".encode("utf8"))
-      if(print_option != "Individual Chapters"):
-        anchor_id = f"id{curPageNum}"
-        meta_file.write(f"<h2 id='{anchor_id}'>{title}</h2>".encode("utf8"))
-        toc_links.append((anchor_id, title))
-
-  if(format_choice == "txt"):
-    # Remove all those pesky HTML tags
-    contentsToWrite = contentsToWrite.text
-  else:
-    # Remove all those pesky, unescaped fancy quotes and apostrophes
-    contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
-    contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
-
-  # We no longer use regex to remove "Next Chapter" text here, 
-  # as it malformed the HTML. The nodes are stripped safely via BeautifulSoup beforehand.
+def writeChapterToFile(filepath, title, contentsToWrite, source_url):
+  contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
+  contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
   contentsToWrite = str(contentsToWrite)
   
-  if format_choice == "epub":
-    anchor_id = f"id{curPageNum}"
-    chapter_filename = f"chapter_{curPageNum:03d}.html"
-    xhtml = f'<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml">\n<head><title>{title}</title></head>\n<body>\n'
-    xhtml += f'<h1 id="{anchor_id}">{title}</h1>\n'
-    xhtml += contentsToWrite
-    xhtml += '\n</body>\n</html>'
-    meta_file.writestr(f"OEBPS/{chapter_filename}", xhtml)
-    toc_links.append((anchor_id, title, chapter_filename))
-  else:
-    file.write(str(contentsToWrite).encode("utf8"))
-    if(print_option == "Both"):
-      meta_file.write(str(contentsToWrite).encode("utf8"))  
-
-  if(format_choice != "txt" and format_choice != "epub"):
-    if(print_option != "One Large File"):
-      file.write("</body></html>".encode("utf8"))
-  elif format_choice == "txt":
-    file.write(("-"*60).encode("utf8"))
-    if(print_option == "Both"):
-      meta_file.write(("-"*60).encode("utf8"))
-      meta_file.write("\n\r\n\r".encode("utf8"))
-
+  temp_filepath = filepath + ".tmp"
+  with open(temp_filepath, "wb") as file:
+    file.write(f"<!-- Source URL: {source_url} -->\n".encode("utf8"))
+    file.write(f"<h1>{title}</h1>\n".encode("utf8"))
+    file.write(contentsToWrite.encode("utf8"))
+  
+  os.replace(temp_filepath, filepath)
 
 def removePunctuation(word):
-  # Remove punctuation from the text.
-  # TODO: Determine what is a good idea to remove or not. (:;*?![]{}*... etc.)
-  word = re.sub(r"[“”,;]", "", word)  # Yes, this is the unicode ".  “” are different.
+  word = re.sub(r"[“”,;]", "", word)
   word = word.rstrip('.') 
   word = word.rstrip('?')
   word = word.rstrip('!')
-  # Used rstrip to remove the periods at end of sentences. 
-  # Not in the regex because it may be part of a word, or elipses...
-  # Apostrophe's also may be part of a name (Az'kerash)
   return word
 
 def removeIllegalWindowsCharacters(file_path):
@@ -177,11 +90,8 @@ def removeIllegalWindowsCharacters(file_path):
 
 def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
   global word_frequency_dict 
-
   chapter_word_count = 0
   for chapter_paragraph in paragraph_list:
-    
-    # Goes through every tag within the paragraph.
     for chapter_paragraph_part in chapter_paragraph.contents:
       text = chapter_paragraph_part
       if(not(isinstance(chapter_paragraph_part, NavigableString))):  
@@ -190,71 +100,94 @@ def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
       split_text = text.split()
       for word in split_text:
         word = removePunctuation(word)
-
-        # Update the dictionary of word frequencies
         if word not in word_frequency_dict:
-          # If it's not in the dictionary, this is the first time it's been seen
           word_frequency_dict[word] = {}
           word_frequency_dict[word]["word"] = word
           word_frequency_dict[word]["frequency"] = 0
           word_frequency_dict[word]["first-appearance"] = title
-
         word_frequency_dict[word]["frequency"] = word_frequency_dict[word]["frequency"] + 1
         word_frequency_dict[word]["last-appearance"] = title
-
       chapter_word_count += len(split_text)
-
   return chapter_word_count
 
-# Function to initialize scraping the page.
-def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory, format_choice, gui_queue, stop_event=None):
-  global print_option 
-  global meta_file 
+def find_resume_state(directory, gui_queue):
+  files = glob.glob(os.path.join(directory, "*.html"))
+  valid_files = []
+  for f in files:
+    basename = os.path.basename(f)
+    if "The Wandering Inn" in basename:
+      continue
+    match = re.match(r"^(\d{3})\s+(.+)\.html$", basename)
+    if match:
+      valid_files.append((int(match.group(1)), f))
+          
+  if not valid_files:
+    return 1, None
+      
+  valid_files.sort(key=lambda x: x[0])
+  
+  for pagenum, f in reversed(valid_files):
+    try:
+      with open(f, 'r', encoding='utf-8') as html_file:
+        content = html_file.read()
+        soup = BeautifulSoup(content, 'html.parser')
+        
+        if not soup.find('p'):
+          gui_queue.put(f"Deleting invalid/blank file: {os.path.basename(f)}")
+          html_file.close()
+          os.remove(f)
+          continue
+        
+        match = re.search(r'<!-- Source URL: (.+?) -->', content)
+        if match:
+          resume_url = match.group(1).strip()
+          return pagenum, resume_url
+        else:
+          gui_queue.put(f"File {os.path.basename(f)} is valid but missing Source URL metadata. Cannot auto-resume.")
+          return pagenum, None
+    except Exception as e:
+      gui_queue.put(f"Error reading {os.path.basename(f)}: {e}")
+      continue
+          
+  return 1, None
+
+def scrapePageInit(start_page_url, stop_page_url, print_option, directory, format_choice, gui_queue, stop_event=None):
   global word_count
   global curPageNum
   global csv_file
   global csv_writer
-  global csv_file_headers
   global word_frequency_filename
   global word_frequency_dict
-  global toc_links
+  global scraper
   
   word_count = 0
-  curPageNum = 1
-  print_option = local_print_option
-  toc_links = []
-  
-  if format_choice == "epub":
-    meta_file = zipfile.ZipFile(directory + f"/The Wandering Inn.epub", 'w', compression=zipfile.ZIP_DEFLATED)
-    # EPUB metadata requires mimetype to be uncompressed
-    meta_file.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
-    container_xml = '''<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>'''
-    meta_file.writestr("META-INF/container.xml", container_xml)
-  else:
-    meta_file = open(directory + f"/The Wandering Inn.{format_choice}", "wb")
-    if(print_option != "Individual Chapters" and format_choice == "html"):
-      meta_file.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1><hr/>""".encode("utf8"))
-  
-  # Grabs manual links if they exist in a links.json
+  scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
   readLinkFile(gui_queue)
 
-  # Creates a csv file
-  csv_file = open(directory + '/000 STATS.csv', mode='w', newline='') 
-  csv_writer = csv.DictWriter(csv_file, fieldnames=csv_file_headers)
-  csv_writer.writeheader()
+  last_page_num, resume_url = find_resume_state(directory, gui_queue)
+  if resume_url:
+    gui_queue.put(f"Found existing valid chapters! Resuming securely from {resume_url}")
+    curPageNum = last_page_num + 1
+    start_page_url = resume_url
+    url = resume_url
+    is_resuming = True
+  else:
+    curPageNum = 1
+    url = start_page_url
+    is_resuming = False
 
-  # Setup the necessary info to create a file for the word frequency
-  word_frequency_filename = directory + '/000 Word Frequency.csv'
+  mode = 'a' if is_resuming else 'w'
+  csv_file = open(os.path.join(directory, '000 STATS.csv'), mode=mode, newline='') 
+  csv_file_headers = ["title", "link", "chapter_word_count", "total_word_count"]
+  csv_writer = csv.DictWriter(csv_file, fieldnames=csv_file_headers)
+  if not is_resuming:
+    csv_writer.writeheader()
+
+  word_frequency_filename = os.path.join(directory, '000 Word Frequency.csv')
   word_frequency_dict = {}
 
   about_to_scrape_last_page = False
-  url = start_page_url
-  import time
+  
   while True:
     if stop_event and stop_event.is_set():
       gui_queue.put("Stop signal received. Cleaning up...")
@@ -262,246 +195,258 @@ def scrapePageInit(start_page_url, stop_page_url, local_print_option, directory,
         printWordFrequency()
         printStats(directory, word_count)
         csv_file.close()
-      if not meta_file.closed:
-        meta_file.close()
       return
 
     if is_url_match(url, stop_page_url):
       about_to_scrape_last_page = True
     
-    url = scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_event)
+    url = scrapePage(url, stop_page_url, directory, gui_queue, stop_event, is_resuming_fetch=is_resuming)
     
-    # If we just scraped the final page, stop
+    if is_resuming:
+      is_resuming = False 
+      time.sleep(random.uniform(2.0, 4.0))
+      continue
+    
+    if url == "" or not url:
+      break
+    
     if about_to_scrape_last_page:
+      gui_queue.put("\nReached the stopping page url, stopping scrape.")
+      gui_queue.put("="*60)
+      gui_queue.put("Congratulations! Your individual chapter files have been downloaded.")
+      gui_queue.put("You can now click 'Compile' to join them into your EPUB/HTML!")
+      
+      printWordFrequency()
+      printStats(directory, word_count)
+      csv_file.close()
       return
       
-    # 3-second delay between chapters
-    gui_queue.put("Pausing for 3 seconds...")
-    time.sleep(3)
+    sleep_time = random.uniform(5.0, 9.0)
+    gui_queue.put(f"Pausing for {sleep_time:.1f} seconds to simulate human reading...")
+    time.sleep(sleep_time)
 
 
-# Function to scrape the page using Python BeautifulSoup, returns the next url
-def scrapePage(url, stop_page_url, directory, format_choice, gui_queue, stop_event=None):
+def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_resuming_fetch=False):
   global curPageNum
   global word_count
-  global print_option
   global next_links
   global csv_file 
   global csv_writer
   global word_frequency_dict
+  global scraper
 
-  if debug:
-    gui_queue.put(f"\nCurrently at {url}.")
+  if not is_resuming_fetch:
+    if debug: gui_queue.put(f"\nCurrently at {url}.")
 
-  # Appends a '/' at the end if it's not seen in the url
-  # This is to allow the inputted "stop" address to stop if it 
-  # encounters an address that does not end in a '/'
   if(url[len(url)-1] != '/'):
     url += '/'
   
-  if debug:
-    gui_queue.put(f"\nUrl = {url} and stop_page_url = {stop_page_url}")
+  try:
+    page = scraper.get(url, timeout=15)
+  except Exception as e:
+    gui_queue.put(f"Network Error: Failed to fetch {url}. ({e})")
+    gui_queue.put("Stopping scrape. You can resume safely later.")
+    if stop_event: stop_event.set()
+    return url
 
-  # Accesses the page
-  page = requests.get(url, headers=headers)
-
-  # Create a BeautifulSoup Object (aka parse Tree), and parse with built-in html.parser
   soup = BeautifulSoup(page.text, 'html.parser')
-
   title = None
   
-  # 1. Try meta og:title (most reliable)
   meta_title = soup.find("meta", property="og:title")
   if meta_title and meta_title.get("content"):
     title = meta_title.get("content").strip()
 
-  # 2. Try standard <title> tag
   if not title:
     title_tag = soup.find('title')
     if title_tag and title_tag.text:
-      title = title_tag.text.split('-')[0].strip() # e.g. "1.00 - The Wandering Inn" -> "1.00"
+      title = title_tag.text.split('-')[0].strip()
 
-  # 3. Try visible headers, but ignore "loading..."
   if not title:
     chapter_title_list = soup.find_all(class_='elementor-heading-title')
     if not chapter_title_list:
       chapter_title_list = soup.find_all('h1', class_='entry-title')
-    
     for t in chapter_title_list:
       t_text = t.text.strip()
       if t_text and "loading" not in t_text.lower():
         title = t_text
         break
 
-  # 4. Fallback: Parse from URL
   if not title:
-    raw_url = url.rstrip('/') # Remove trailing slash if present
-    url_part = raw_url.split('/')[-1] # Gets "rw1-00"
-    title = url_part.replace('-', '.').capitalize() # Gets "Rw1.00"
+    raw_url = url.rstrip('/')
+    url_part = raw_url.split('/')[-1]
+    title = url_part.replace('-', '.').capitalize()
 
   title = removeIllegalWindowsCharacters(title)
-  if debug:
-    gui_queue.put(title)
-  gui_queue.put(f"\nCurrently Scraping {url} - {title}")
+  if not is_resuming_fetch:
+    gui_queue.put(f"Scraping: {url} - {title}")
 
-  # Creates a file for this specific chapter, only if needed
-  fileTitle = F"{curPageNum:03d} {title}.{format_choice}"
-
-  fileTitleDirectory = directory + "/" + fileTitle
-  file = meta_file
-  if print_option != 'One Large File':
-    file = open(fileTitleDirectory, "wb")
-
-
-  # Pull all text from the new "twi-article" div, fallback to "entry-content"
   chapter_paragraph_list = soup.find(class_='twi-article')
   if not chapter_paragraph_list:
     chapter_paragraph_list = soup.find(class_='entry-content')
     
   if not chapter_paragraph_list:
-    gui_queue.put(f"ERROR: Could not find article content at {url}")
-    return ""
+    gui_queue.put(f"ERROR: Could not find article content at {url}. You might be blocked.")
+    gui_queue.put("Stopping scrape. Use Resume later.")
+    if stop_event: stop_event.set()
+    return url
   
-  # Pull text from all instances of <p> tag within the container
   chapter_paragraph_list_items = chapter_paragraph_list.find_all('p')
 
-  # Grabs the next chapter link
-  # Will use the manual link if it exists
   next_chapter_url = ""
   if ((next_links != None) and ("AfterLinks" in next_links) and (url in next_links["AfterLinks"])):
     next_chapter_url = next_links["AfterLinks"][url]
   else:
-    # Explicitly search for "Next Chapter", "Next chapter", etc. in the article
     next_links_search = chapter_paragraph_list.find_all("a", string=lambda s: s and ("next chapter" in s.lower() or "next" in s.lower()))
-    
     if len(next_links_search) == 0:
-      gui_queue.put("Stopped due to no next_chapter_link found")
-      printStats(directory, word_count)
-      file.close()
+      if not is_resuming_fetch:
+        gui_queue.put("Stopped due to no next_chapter_link found")
+        if stop_event: stop_event.set()
       return ""
       
-    next_chapter_link = next_links_search[-1]  # Grabs the final link to the next one
+    next_chapter_link = next_links_search[-1]
     next_chapter_url = next_chapter_link.get('href')
-    
-    # Removes the .wordpress found on the site
     next_chapter_url = next_chapter_url.replace(".wordpress","")  
 
-  # Safely strip out the navigation links (Next Chapter / Previous Chapter) from the DOM
-  # so they don't appear in the compiled book. Done via BeautifulSoup to prevent HTML mangling.
+  if is_resuming_fetch:
+    return next_chapter_url
+
   for a_tag in chapter_paragraph_list.find_all("a"):
     link_text = a_tag.get_text().lower()
     if "next" in link_text or "previous" in link_text:
       parent_p = a_tag.find_parent("p")
-      if parent_p:
-        parent_p.decompose()
-      else:
-        a_tag.decompose()
+      if parent_p: parent_p.decompose()
+      else: a_tag.decompose()
 
-  # Write this chapter to file
-  writeChapterToFile(file, title, chapter_paragraph_list, format_choice, gui_queue)
+  fileTitle = f"{curPageNum:03d} {title}.html"
+  fileTitleDirectory = os.path.join(directory, fileTitle)
+
+  writeChapterToFile(fileTitleDirectory, title, chapter_paragraph_list, url)
   
-  # Grab the word count, but don't include the final "paragraph" which is just the next chapter links
   chapter_word_count = getChapterWordCountAndUpdateWordFrequencies(chapter_paragraph_list_items[:-1], title)
   word_count += chapter_word_count
-  gui_queue.put(f"Word Count: {word_count}, Chapter Word Count: {chapter_word_count}")
-  curPageNum = curPageNum + 1
+  gui_queue.put(f"Word Count: {word_count}, Chapter Word: {chapter_word_count}")
+  curPageNum += 1
 
-  # Create a dictionary of information for the chapter
   chapter_info = {}
   chapter_info["title"] = title 
   chapter_info["link"] = url
   chapter_info["chapter_word_count"] = chapter_word_count
   chapter_info["total_word_count"] = word_count
-
-  # Writes the chapter info to the csv file
   csv_writer.writerow(chapter_info)
-
-  # Clean up if you're done
-  if is_url_match(url, stop_page_url):
-
-    if format_choice == "epub":
-      # Generate content.opf (Manifest and Spine)
-      opf = '''<?xml version="1.0" encoding="UTF-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
-  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:title>The Wandering Inn</dc:title>
-    <dc:language>en</dc:language>
-    <dc:identifier id="BookId">urn:uuid:12345</dc:identifier>
-  </metadata>
-  <manifest>
-    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>'''
-      for _, _, filename in toc_links:
-        opf += f'\n    <item id="{filename}" href="{filename}" media-type="application/xhtml+xml"/>'
-      opf += '\n  </manifest>\n  <spine toc="ncx">'
-      for _, _, filename in toc_links:
-        opf += f'\n    <itemref idref="{filename}"/>'
-      opf += '\n  </spine>\n</package>'
-      meta_file.writestr("OEBPS/content.opf", opf)
-
-      # Generate toc.ncx (Table of Contents)
-      ncx = '''<?xml version="1.0" encoding="UTF-8"?>
-<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-  <head><meta name="dtb:uid" content="urn:uuid:12345"/></head>
-  <docTitle><text>The Wandering Inn</text></docTitle>
-  <navMap>'''
-      for idx, (anchor, toc_title, filename) in enumerate(toc_links, 1):
-        ncx += f'''\n    <navPoint id="navPoint-{idx}" playOrder="{idx}">
-      <navLabel><text>{toc_title}</text></navLabel>
-      <content src="{filename}#{anchor}"/>
-    </navPoint>'''
-      ncx += '\n  </navMap>\n</ncx>'
-      meta_file.writestr("OEBPS/toc.ncx", ncx)
-      
-      meta_file.close()
-
-    else:
-      if(print_option != "Individual Chapters" and format_choice == "html"):
-        meta_file.write("""</body></html>""".encode("utf8"))
-      meta_file.close()
-
-      # Inject TOC if applicable for HTML
-      if print_option != "Individual Chapters" and format_choice == "html" and len(toc_links) > 0:
-        gui_queue.put("Generating Table of Contents...")
-      html_filepath = directory + f"/The Wandering Inn.{format_choice}"
-      try:
-        with open(html_filepath, 'rb') as f:
-          content_bytes = f.read()
-          
-        insertion_marker = "<h1>The Wandering Inn</h1><hr/>".encode("utf8")
-        insert_idx = content_bytes.find(insertion_marker)
-        
-        if insert_idx != -1:
-          insert_idx += len(insertion_marker)
-          toc_html = "<h2>Table of Contents</h2><ul>"
-          for anchor, toc_title in toc_links:
-            toc_html += f"<li><a href='#{anchor}'>{toc_title}</a></li>"
-          toc_html += "</ul><hr/>"
-          
-          new_content = content_bytes[:insert_idx] + toc_html.encode("utf8") + content_bytes[insert_idx:]
-          with open(html_filepath, 'wb') as f:
-            f.write(new_content)
-      except Exception as e:
-        gui_queue.put(f"Failed to generate Table of Contents: {e}")
-
-    csv_file.close()
-    
-    printWordFrequency()
-    printStats(directory, word_count)
-
-    gui_queue.put(" ")
-    gui_queue.put("Reached the stopping page url, stopping.")
-
-    gui_queue.put(" ")
-    gui_queue.put("="*60)
-    gui_queue.put(" ")
-    gui_queue.put("Congratulations! Your file(s) should be in the folder you specified")
-
-  # Clean up the file if we're done with the individual file
-  if(print_option == "Individual Chapters"):
-    file.close()
-
-
 
   return next_chapter_url
 
+def compileBook(directory, format_choice, print_option, gui_queue):
+  gui_queue.put(f"\n--- Compiling downloaded files to {format_choice.upper()} ---")
+  files = glob.glob(os.path.join(directory, "*.html"))
+  valid_files = []
+  for f in files:
+    basename = os.path.basename(f)
+    if "The Wandering Inn" in basename:
+      continue
+    match = re.match(r"^(\d{3})\s+(.+)\.html$", basename)
+    if match:
+      valid_files.append((int(match.group(1)), f, match.group(2)))
+      
+  valid_files.sort(key=lambda x: x[0])
+  
+  if not valid_files:
+    gui_queue.put("No downloaded HTML chapters found to compile!")
+    return
+    
+  toc_links = []
+  
+  if format_choice == "epub":
+    epub_path = os.path.join(directory, "The Wandering Inn.epub")
+    gui_queue.put("Creating The Wandering Inn.epub...")
+    with zipfile.ZipFile(epub_path, 'w', compression=zipfile.ZIP_DEFLATED) as epub:
+      epub.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+      container_xml = '''<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n  <rootfiles>\n    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n  </rootfiles>\n</container>'''
+      epub.writestr("META-INF/container.xml", container_xml)
+      
+      for pagenum, filepath, title in valid_files:
+         anchor_id = f"id{pagenum}"
+         chapter_filename = f"chapter_{pagenum:03d}.html"
+         
+         with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+            xhtml = f'<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml">\n<head><title>{title}</title></head>\n<body>\n'
+            contents_no_comment = re.sub(r'<!-- Source URL: .+? -->\n', '', content)
+            contents_no_comment = contents_no_comment.replace('<h1>', f'<h1 id="{anchor_id}">', 1)
+            xhtml += contents_no_comment + '\n</body>\n</html>'
+            
+            epub.writestr(f"OEBPS/{chapter_filename}", xhtml)
+            toc_links.append((anchor_id, title, chapter_filename))
+            gui_queue.put(f"Bundled {title} into EPUB...")
+            
+      opf = '''<?xml version="1.0" encoding="UTF-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">\n  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">\n    <dc:title>The Wandering Inn</dc:title>\n    <dc:language>en</dc:language>\n    <dc:identifier id="BookId">urn:uuid:12345</dc:identifier>\n  </metadata>\n  <manifest>\n    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>'''
+      for _, _, filename in toc_links: opf += f'\n    <item id="{filename}" href="{filename}" media-type="application/xhtml+xml"/>'
+      opf += '\n  </manifest>\n  <spine toc="ncx">'
+      for _, _, filename in toc_links: opf += f'\n    <itemref idref="{filename}"/>'
+      opf += '\n  </spine>\n</package>'
+      epub.writestr("OEBPS/content.opf", opf)
 
+      ncx = '''<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">\n  <head><meta name="dtb:uid" content="urn:uuid:12345"/></head>\n  <docTitle><text>The Wandering Inn</text></docTitle>\n  <navMap>'''
+      for idx, (anchor, toc_title, filename) in enumerate(toc_links, 1):
+        ncx += f'\n    <navPoint id="navPoint-{idx}" playOrder="{idx}">\n      <navLabel><text>{toc_title}</text></navLabel>\n      <content src="{filename}#{anchor}"/>\n    </navPoint>'
+      ncx += '\n  </navMap>\n</ncx>'
+      epub.writestr("OEBPS/toc.ncx", ncx)
+      
+      gui_queue.put("Successfully created The Wandering Inn.epub!")
+      
+  elif format_choice == "html":
+    if print_option == "Individual Chapters":
+      gui_queue.put("HTML format selected, but Individual Chapters is also selected. Files are already extracted as Individual Chapters. Compile not required.")
+      return
+      
+    html_path = os.path.join(directory, "The Wandering Inn.html")
+    gui_queue.put("Compiling The Wandering Inn.html...")
+    with open(html_path, "wb") as mf:
+      mf.write("""<!DOCTYPE html><html><head><link rel="stylesheet" type="text/css" href="style.css"/><title>The Wandering Inn</title></head><body><h1>The Wandering Inn</h1>\n<h2>Table of Contents</h2><ul>\n""".encode("utf8"))
+      
+      body_contents = ""
+      for pagenum, filepath, title in valid_files:
+        anchor_id = f"id{pagenum}"
+        mf.write(f"<li><a href='#{anchor_id}'>{title}</a></li>\n".encode("utf8"))
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+            contents_no_comment = re.sub(r'<!-- Source URL: .+? -->\n', '', content)
+            contents_no_comment = contents_no_comment.replace('<h1>', f'<h2 id="{anchor_id}">', 1)
+            contents_no_comment = contents_no_comment.replace('</h1>', '</h2>', 1)
+            body_contents += contents_no_comment + "<hr/>\n"
+        gui_queue.put(f"Bundled {title} into HTML...")
+      
+      mf.write("</ul><hr/>\n".encode("utf8"))
+      mf.write(body_contents.encode("utf8"))
+      mf.write("</body></html>".encode("utf8"))
+      gui_queue.put("Successfully created The Wandering Inn.html!")
+      
+  elif format_choice == "txt":
+    if print_option == "Individual Chapters":
+      gui_queue.put("Compiling all chapters into individual .txt files...")
+      for pagenum, filepath, title in valid_files:
+        txt_path = os.path.join(directory, f"{pagenum:03d} {title}.txt")
+        with open(filepath, 'r', encoding='utf-8') as f:
+          content = f.read()
+          soup = BeautifulSoup(content, 'html.parser')
+          with open(txt_path, 'wb') as tf:
+            tf.write(title.encode('utf8'))
+            tf.write(("\n\r\n\r" + soup.text + "\n\r\n\r").encode('utf8'))
+            tf.write(("-"*60).encode("utf8"))
+      gui_queue.put("Successfully created Individual TXT files!")
+    else:
+      txt_path = os.path.join(directory, "The Wandering Inn.txt")
+      gui_queue.put("Compiling The Wandering Inn.txt...")
+      with open(txt_path, "wb") as mf:
+        for pagenum, filepath, title in valid_files:
+          with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+            soup = BeautifulSoup(content, 'html.parser')
+            mf.write(title.encode('utf8'))
+            mf.write(("\n\r\n\r" + soup.text + "\n\r\n\r").encode('utf8'))
+            mf.write(("-"*60).encode("utf8"))
+            mf.write("\n\r\n\r".encode("utf8"))
+          gui_queue.put(f"Bundled {title} into TXT...")
+      gui_queue.put("Successfully created The Wandering Inn.txt!")

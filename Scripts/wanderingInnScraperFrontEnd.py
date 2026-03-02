@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import queue
 import threading 
+import os
 import wanderingInnScraperBackEnd as backend
 
 VERSION = "1.7.0"
@@ -130,11 +131,12 @@ class WanderingInnScraperGUI:
              insertbackground=FG_COLOR, width=30, borderwidth=1, highlightthickness=0).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
     CustomButton(folder_inner, text="Browse", command=self.browse_folder).pack(side=tk.LEFT)
     
-    # Submit & Stop Buttons
+    # Submit, Stop, & Compile Buttons
     btn_frame = tk.Frame(options_container, bg=BG_COLOR)
     btn_frame.pack(anchor=tk.W)
-    CustomButton(btn_frame, text="Submit", command=self.on_submit).pack(side=tk.LEFT, padx=(0, 10))
-    CustomButton(btn_frame, text="Stop Program", command=self.on_stop).pack(side=tk.LEFT)
+    CustomButton(btn_frame, text="Scrape", command=self.on_submit).pack(side=tk.LEFT, padx=(0, 10))
+    CustomButton(btn_frame, text="Stop", command=self.on_stop).pack(side=tk.LEFT, padx=(0, 10))
+    CustomButton(btn_frame, text="Compile Offline", command=self.on_compile).pack(side=tk.LEFT)
     
     # Right Side - Console Log
     console_container = tk.LabelFrame(main_frame, text="Console Log", bg=BG_COLOR, fg=FG_COLOR, padx=10, pady=10)
@@ -192,6 +194,26 @@ class WanderingInnScraperGUI:
     if not self.stop_event.is_set():
       self.stop_event.set()
       self.log("\nStop signal sent. Finishing current chapter and stopping...")
+
+  def on_compile(self):
+    directory = self.folder_location.get().strip()
+    format_choice = self.format_choice.get()
+    print_option = self.print_option.get()
+    
+    if not directory:
+      messagebox.showwarning("Incomplete Information", "Make sure to choose a folder!")
+      return
+      
+    if format_choice == "epub" and print_option != "One Large File":
+      messagebox.showwarning("Invalid Selection", "EPUB format must be 'One Large File'. The EPUB will automatically isolate chapters internally.")
+      return
+
+    confirm_msg = f"Compile downloaded chapters in '{os.path.basename(directory)}' into {format_choice.upper()}?"
+    if messagebox.askyesno("Confirm Compile", confirm_msg):
+      self.log(f"Beginning Compilation for {format_choice.upper()}...\n")
+      threading.Thread(target=backend.compileBook,
+              args=(directory, format_choice, print_option, self.gui_queue), 
+              daemon=True).start()
 
   def log(self, text):
     self.console.config(state='normal')
