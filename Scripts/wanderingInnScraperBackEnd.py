@@ -22,6 +22,8 @@ headers = {
 }
 scraper = None
 
+# Function to check if the current url matches the stop url.
+# Also handles the 2017 vs 2023 Volume 1 discrepancy. (Vol 1 rewrite)
 def is_url_match(current_url, stop_url):
   if current_url == stop_url:
     return True
@@ -32,6 +34,9 @@ def is_url_match(current_url, stop_url):
       return True
   return False
 
+# Function that will read in a json file containing
+# manually inputted links if that file exists.
+# This is for any unusual chapters where the "Next Chapter" link does not work.
 def readLinkFile(gui_queue):
   global next_links
   filename = "links.json"
@@ -44,6 +49,8 @@ def readLinkFile(gui_queue):
     gui_queue.put(f"WARNING: No links.json detected.")
     return
 
+# Function that creates a stat page.
+# At the moment, it only has the total word count.
 def printStats(directory, word_count): 
   fileTitle = "000 STATS.txt"
   fileTitleDirectory = os.path.join(directory, fileTitle)
@@ -53,6 +60,8 @@ def printStats(directory, word_count):
     stringToWrite = f"Word Count: {word_count}"
     file.write(stringToWrite.encode('utf8'))
 
+# Function that creates a word frequency page.
+# It ranks every word by how frequently it appears.
 def printWordFrequency():
   global word_frequency_filename
   global word_frequency_dict
@@ -63,6 +72,8 @@ def printWordFrequency():
     for word in sorted(word_frequency_dict, key=lambda x: (word_frequency_dict[x]["frequency"]), reverse=True):
       csv_writer_word_freq.writerow(word_frequency_dict[word])
 
+# Function that handles writing the individual chapter to a file.
+# It also saves the source URL invisibly so the program can auto-resume later.
 def writeChapterToFile(filepath, title, contentsToWrite, source_url):
   contentsToWrite = re.sub(r'[“”]', '&quot;', str(contentsToWrite))
   contentsToWrite = re.sub(r'[’]', '&apos;', str(contentsToWrite))
@@ -76,6 +87,7 @@ def writeChapterToFile(filepath, title, contentsToWrite, source_url):
   
   os.replace(temp_filepath, filepath)
 
+# Function to remove punctuation
 def removePunctuation(word):
   word = re.sub(r"[“”,;]", "", word)
   word = word.rstrip('.') 
@@ -83,11 +95,13 @@ def removePunctuation(word):
   word = word.rstrip('!')
   return word
 
+# Removes all illegal characters so a file/folder can be created successfully in Windows
 def removeIllegalWindowsCharacters(file_path):
   file_path = re.sub(r'[<>:"\/\\\|\?\*]', "", file_path)
   file_path = file_path.strip()
   return file_path
 
+# Scrapes the word count from the chapter and updates the dictionary
 def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
   global word_frequency_dict 
   chapter_word_count = 0
@@ -110,6 +124,8 @@ def getChapterWordCountAndUpdateWordFrequencies(paragraph_list, title):
       chapter_word_count += len(split_text)
   return chapter_word_count
 
+# Function to scan the existing files in a directory to find the last valid chapter.
+# It will delete any corrupted/blank files and read the hidden Source URL to auto-resume.
 def find_resume_state(directory, gui_queue):
   files = glob.glob(os.path.join(directory, "*.html"))
   valid_files = []
@@ -151,6 +167,8 @@ def find_resume_state(directory, gui_queue):
           
   return 1, None
 
+# Function to initialize scraping the page.
+# Sets up the Cloudscraper session, checks for resume states, and handles the main scraping loop.
 def scrapePageInit(start_page_url, stop_page_url, print_option, directory, format_choice, gui_queue, stop_event=None):
   global word_count
   global curPageNum
@@ -226,6 +244,8 @@ def scrapePageInit(start_page_url, stop_page_url, print_option, directory, forma
     time.sleep(sleep_time)
 
 
+# Function to scrape an individual page using BeautifulSoup and Cloudscraper.
+# Returns the url for the next chapter.
 def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_resuming_fetch=False):
   global curPageNum
   global word_count
@@ -336,6 +356,8 @@ def scrapePage(url, stop_page_url, directory, gui_queue, stop_event=None, is_res
 
   return next_chapter_url
 
+# Function to compile all the individual HTML chapters into a single unified book format.
+# Supports EPUB, HTML (with Table of Contents), and TXT formats.
 def compileBook(directory, format_choice, print_option, gui_queue):
   gui_queue.put(f"\n--- Compiling downloaded files to {format_choice.upper()} ---")
   files = glob.glob(os.path.join(directory, "*.html"))
